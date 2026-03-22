@@ -239,7 +239,7 @@ export default function GeneratePage() {
 
               {/* Live card preview */}
               <div style={{ marginBottom: 16 }}>
-                <Card profile={profile} theme={theme} />
+                <Card profile={profile} theme={theme} showEvidence />
               </div>
 
               {/* Save options */}
