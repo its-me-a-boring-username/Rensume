@@ -87,8 +87,8 @@ CRITICAL for function evidence: The evidence must justify WHY this specific func
 Function levels list:
 Process Specialist - Executes defined processes
 Process Manager - Improves and manages processes
-People Manager - Manages who does the work
-Strategic Manager - Manages teams executing strategy-linked initiatives
+People Manager - Manages a team of individual contributors who execute defined processes
+Strategic Manager - Manages multiple teams or managers executing strategy-linked initiatives
 Strategic Advisor - Recommends what should happen. No binding authority
 Strategic Executive - Decides what should happen. Binding authority
 
