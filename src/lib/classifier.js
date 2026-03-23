@@ -127,12 +127,6 @@ Extract Knowledge Area / Discipline using SOC 2018 minor group names.
 Use only these SOC 2018 minor group names:
 ${SOC_MINOR_GROUPS.join(', ')}
 
-For each area include evidence: 2-4 bullet points using partial quotes from the resume, each tagged with company and role.
-Format as: "· Company (Role): 'partial quote or paraphrase'" separated by the · character.
-Use single quotes not double quotes within evidence text.
-Use "Based on [company]: [synthesis]" only if no direct quote is available.
-Do NOT reuse the same quote across knowledge areas.
-
 Respond ONLY with valid JSON:
 {"knowledge_areas": [{"name": "", "months": 0, "evidence": ""}]}`
 }
