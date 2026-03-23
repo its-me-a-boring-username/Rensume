@@ -311,7 +311,9 @@ export default function GeneratePage() {
                 <ThemePicker theme={theme} onChange={setTheme} />
               </div>
               <div style={{ marginBottom: 16 }}>
-                <Card profile={profile} theme={theme} showEvidence />
+                  <div ref={cardRef}>
+                    <Card profile={profile} theme={theme} showEvidence />
+                  </div>
               </div>
               <SaveOptions
                 selected={saveMode}
