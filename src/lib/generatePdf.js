@@ -1,90 +1,58 @@
 // src/lib/generatePdf.js
 // Generates a downloadable PDF of the Rensume taxonomy card using jsPDF.
-// Mirrors the card visual design as closely as possible in PDF drawing commands.
+// Currently hardcoded to Bordeaux theme — theme support to be added once rendering is stable.
 
 import { jsPDF } from 'jspdf'
-import { THEMES } from '../components/Card'
 import { getSeniorityLabel } from './classifier'
 
-// ─── Layout constants ─────────────────────────────────────────────────────────
+// ─── Bordeaux color palette ───────────────────────────────────────────────────
 
-const PAGE_W    = 210  // A4 mm
-const PAGE_H    = 297
-const MARGIN    = 16
-const COL_W     = PAGE_W - MARGIN * 2
-const CARD_X    = MARGIN
-const HDR_H     = 36
-const ACC_H     = 1.5
-const FONT      = 'helvetica'
+const C = {
+  headerBg:    [44,  48,  56],   // #2c3038
+  accent:      [144, 64,  96],   // #904060
+  logoText:    [144, 64,  96],   // #904060
+  summaryText: [144, 154, 168],  // #909aa8
+  bodyBg:      [250, 248, 244],  // #faf8f4
+  sectionText: [96,  88,  80],   // #605850
+  divider:     [216, 208, 200],  // #d8d0c8
+  yearsText:   [160, 152, 136],  // #a09888
+  pillFnBg:    [44,  48,  56],   // #2c3038
+  pillFnText:  [200, 112, 144],  // #c87090
+  pillKaBg:    [144, 64,  96],   // #904060
+  pillKaText:  [26,  8,   16],   // #1a0810
+  pillIndBg:   [237, 234, 230],  // #edeae6
+  pillIndText: [64,  56,  48],   // #403830
+  pillIndBdr:  [200, 192, 184],  // #c8c0b8
+  strengthsBg: [245, 241, 235],  // #f5f1eb
+  strengthsTxt:[80,  64,  48],   // #504030
+  toolBg:      [237, 234, 230],  // #edeae6
+  toolText:    [64,  56,  48],   // #403830
+  toolBdr:     [200, 192, 184],  // #c8c0b8
+  credType:    [160, 144, 128],  // #a09080
+  credName:    [26,  20,  16],   // #1a1410
+  credSub:     [112, 96,  80],   // #706050
+  footerBg:    [250, 248, 244],  // #faf8f4
+  footerLeft:  [176, 168, 152],  // #b0a898
+  footerRight: [104, 40,  72],   // #682848
+  black:       [0,   0,   0],
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function hexToRgb(hex) {
-  const h = hex.replace('#', '')
-  return [
-    parseInt(h.substring(0, 2), 16),
-    parseInt(h.substring(2, 4), 16),
-    parseInt(h.substring(4, 6), 16),
-  ]
-}
+const F = 'helvetica'
 
-function setFill(doc, hex) {
-  doc.setFillColor(...hexToRgb(hex))
-}
-
-function setTextColor(doc, hex) {
-  doc.setTextColor(...hexToRgb(hex))
-}
-
-function setDrawColor(doc, hex) {
-  doc.setDrawColor(...hexToRgb(hex))
-}
-
-/**
- * Wrap text to fit within maxWidth, return array of lines.
- */
-function wrapText(doc, text, maxWidth, fontSize) {
-  doc.setFontSize(fontSize)
-  return doc.splitTextToSize(text || '', maxWidth)
-}
-
-/**
- * Draw a filled rounded rect approximation (jsPDF roundedRect).
- */
-function pill(doc, x, y, w, h, fillHex, textHex, label, fontSize = 6.5) {
-  setFill(doc, fillHex)
-  doc.roundedRect(x, y, w, h, 1.5, 1.5, 'F')
-  setTextColor(doc, textHex)
-  doc.setFont(FONT, 'bold')
-  doc.setFontSize(fontSize)
-  doc.text(label, x + w / 2, y + h / 2 + fontSize * 0.18, { align: 'center' })
-}
-
-/**
- * Draw a section divider line + label.
- */
-function sectionHeader(doc, label, x, y, w, secColor, divColor) {
-  setDrawColor(doc, divColor)
-  doc.setLineWidth(0.2)
-  doc.line(x, y + 3.5, x + w, y + 3.5)
-  setTextColor(doc, secColor)
-  doc.setFont(FONT, 'bold')
-  doc.setFontSize(6)
-  doc.text(label.toUpperCase(), x, y + 3)
-  return y + 7
-}
+function fill(doc, rgb)  { doc.setFillColor(...rgb) }
+function txt(doc, rgb)   { doc.setTextColor(...rgb) }
+function drw(doc, rgb)   { doc.setDrawColor(...rgb) }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-/**
- * Generate and download a PDF of the Rensume card.
- *
- * @param {object} profile  — classified profile from classifier.js
- * @param {string} themeName — one of the THEMES keys
- */
 export function downloadCardPdf(profile, themeName = 'bordeaux') {
-  const t = THEMES[themeName] || THEMES.bordeaux
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+
+  const M  = 16
+  const W  = 210 - M * 2
+  const X  = M
 
   const {
     summary = '',
@@ -96,205 +64,198 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     credentials = [],
   } = profile
 
-  let y = MARGIN
+  let y = M
 
-  // ── Header ──────────────────────────────────────────────────────────────────
+  // ── HEADER ─────────────────────────────────────────────────────────────────
 
-  setFill(doc, t.header.background)
-  doc.rect(CARD_X, y, COL_W, HDR_H, 'F')
+  fill(doc, C.headerBg)
+  doc.rect(X, y, W, 30, 'F')
 
-  // Logo
-  setTextColor(doc, t.logo.color)
-  doc.setFont(FONT, 'bold')
+  txt(doc, C.logoText)
+  doc.setFont(F, 'bold')
   doc.setFontSize(6)
-  doc.text('RENSUME · TAXONOMY PROFILE', CARD_X + 5, y + 7)
+  doc.text('RENSUME · TAXONOMY PROFILE', X + 5, y + 7)
 
-  // Summary
-  setTextColor(doc, t.summary.color)
-  doc.setFont(FONT, 'normal')
+  txt(doc, C.summaryText)
+  doc.setFont(F, 'normal')
   doc.setFontSize(8)
-  const summaryLines = wrapText(doc, summary, COL_W - 10, 8)
-  summaryLines.forEach((line, i) => {
-    doc.text(line, CARD_X + 5, y + 13 + i * 4.5)
-  })
+  const sumLines = doc.splitTextToSize(summary, W - 12)
+  doc.text(sumLines, X + 5, y + 13)
 
-  y += HDR_H
+  y += 30
 
-  // ── Accent rule ─────────────────────────────────────────────────────────────
+  // ── ACCENT RULE ────────────────────────────────────────────────────────────
 
-  setFill(doc, t.accent.background)
-  doc.rect(CARD_X, y, COL_W, ACC_H, 'F')
-  y += ACC_H
+  fill(doc, C.accent)
+  doc.rect(X, y, W, 1.5, 'F')
+  y += 1.5
 
-  // ── Body ────────────────────────────────────────────────────────────────────
+  // ── BODY BACKGROUND ────────────────────────────────────────────────────────
 
-  setFill(doc, t.body.background)
-  const bodyStartY = y
+  fill(doc, C.bodyBg)
+  doc.rect(X, y, W, 297 - y - M, 'F')
+  y += 7
 
-  // We'll draw the body background after we know the height
-  // For now, track y and draw rows
+  // ── SECTION HELPER ─────────────────────────────────────────────────────────
 
-  y += 6
+  function section(label) {
+    drw(doc, C.divider)
+    doc.setLineWidth(0.2)
+    doc.line(X + 5, y + 4, X + W - 5, y + 4)
+    txt(doc, C.sectionText)
+    doc.setFont(F, 'bold')
+    doc.setFontSize(6)
+    doc.text(label.toUpperCase(), X + 5, y + 3.5)
+    y += 8
+  }
 
-  // ── Function ────────────────────────────────────────────────────────────────
+  // ── PILL ROW HELPER ────────────────────────────────────────────────────────
+
+  function pillRow(label, years, bgRgb, textRgb, borderRgb = null) {
+    doc.setFont(F, 'bold')
+    doc.setFontSize(7)
+    const pillW = Math.min(doc.getTextWidth(label) + 10, 100)
+    const pillH = 7
+
+    fill(doc, bgRgb)
+    doc.roundedRect(X + 5, y, pillW, pillH, 1.5, 1.5, 'F')
+
+    if (borderRgb) {
+      drw(doc, borderRgb)
+      doc.setLineWidth(0.2)
+      doc.roundedRect(X + 5, y, pillW, pillH, 1.5, 1.5, 'S')
+    }
+
+    txt(doc, textRgb)
+    doc.setFont(F, 'bold')
+    doc.setFontSize(7)
+    doc.text(label, X + 5 + pillW / 2, y + 4.8, { align: 'center' })
+
+    txt(doc, C.yearsText)
+    doc.setFont(F, 'normal')
+    doc.setFontSize(7)
+    doc.text(`${years}y`, X + W - 6, y + 4.8, { align: 'right' })
+
+    y += pillH + 3
+  }
+
+  // ── FUNCTION ───────────────────────────────────────────────────────────────
 
   if (functions.length) {
-    y = sectionHeader(doc, 'Function', CARD_X + 5, y, COL_W - 10, t.section.color, t.section.borderBottom.replace('0.5px solid ', ''))
-
+    section('Function')
     functions.forEach(fn => {
-      const label = getSeniorityLabel(fn.name, fn.years)
-      const pillW = Math.min(doc.getTextWidth(label) * 1.6 + 8, 80)
-      pill(doc, CARD_X + 5, y, pillW, 7, t.pillFn.background, t.pillFn.color, label)
-      setTextColor(doc, t.years.color)
-      doc.setFont(FONT, 'normal')
-      doc.setFontSize(6.5)
-      doc.text(`${fn.years}y`, CARD_X + COL_W - 10, y + 5, { align: 'right' })
-      y += 10
+      pillRow(getSeniorityLabel(fn.name, fn.years), fn.years, C.pillFnBg, C.pillFnText)
     })
+    y += 2
   }
 
-  // ── Knowledge area ──────────────────────────────────────────────────────────
+  // ── KNOWLEDGE AREA ─────────────────────────────────────────────────────────
 
   if (knowledge_areas.length) {
-    y += 2
-    y = sectionHeader(doc, 'Knowledge area', CARD_X + 5, y, COL_W - 10, t.section.color, t.section.borderBottom.replace('0.5px solid ', ''))
-
+    section('Knowledge area')
     knowledge_areas.forEach(ka => {
-      const pillW = Math.min(doc.getTextWidth(ka.name) * 1.6 + 8, 90)
-      pill(doc, CARD_X + 5, y, pillW, 7, t.pillKa.background, t.pillKa.color, ka.name)
-      setTextColor(doc, t.years.color)
-      doc.setFont(FONT, 'normal')
-      doc.setFontSize(6.5)
-      doc.text(`${ka.years}y`, CARD_X + COL_W - 10, y + 5, { align: 'right' })
-      y += 10
+      pillRow(ka.name, ka.years, C.pillKaBg, C.pillKaText)
     })
+    y += 2
   }
 
-  // ── Industry ────────────────────────────────────────────────────────────────
+  // ── INDUSTRY ───────────────────────────────────────────────────────────────
 
   if (industries.length) {
-    y += 2
-    y = sectionHeader(doc, 'Industry', CARD_X + 5, y, COL_W - 10, t.section.color, t.section.borderBottom.replace('0.5px solid ', ''))
-
+    section('Industry')
     industries.forEach(ind => {
-      const pillW = Math.min(doc.getTextWidth(ind.name) * 1.6 + 8, 80)
-      setFill(doc, t.pillInd.background)
-      doc.roundedRect(CARD_X + 5, y, pillW, 7, 1.5, 1.5, 'F')
-      setDrawColor(doc, t.pillInd.border?.replace('0.5px solid ', '') || '#c8c0b8')
-      doc.setLineWidth(0.2)
-      doc.roundedRect(CARD_X + 5, y, pillW, 7, 1.5, 1.5, 'S')
-      setTextColor(doc, t.pillInd.color)
-      doc.setFont(FONT, 'bold')
-      doc.setFontSize(6.5)
-      doc.text(ind.name, CARD_X + 5 + pillW / 2, y + 4.7, { align: 'center' })
-      setTextColor(doc, t.years.color)
-      doc.setFont(FONT, 'normal')
-      doc.text(`${ind.years}y`, CARD_X + COL_W - 10, y + 5, { align: 'right' })
-      y += 10
+      pillRow(ind.name, ind.years, C.pillIndBg, C.pillIndText, C.pillIndBdr)
     })
+    y += 2
   }
 
-  // ── Strengths ───────────────────────────────────────────────────────────────
+  // ── STRENGTHS ──────────────────────────────────────────────────────────────
 
   if (strengths) {
-    y += 2
-    y = sectionHeader(doc, 'Strengths', CARD_X + 5, y, COL_W - 10, t.section.color, t.section.borderBottom.replace('0.5px solid ', ''))
-
-    setFill(doc, '#f5f1eb')
-    const strLines = wrapText(doc, strengths, COL_W - 18, 8)
-    const strBoxH = strLines.length * 4.5 + 6
-    doc.rect(CARD_X + 5, y, COL_W - 10, strBoxH, 'F')
-    setTextColor(doc, '#504030')
-    doc.setFont(FONT, 'normal')
+    section('Strengths')
+    const strLines = doc.splitTextToSize(strengths, W - 18)
+    const strH = strLines.length * 4.8 + 6
+    fill(doc, C.strengthsBg)
+    doc.rect(X + 5, y, W - 10, strH, 'F')
+    txt(doc, C.strengthsTxt)
+    doc.setFont(F, 'normal')
     doc.setFontSize(8)
-    strLines.forEach((line, i) => {
-      doc.text(line, CARD_X + 9, y + 5 + i * 4.5)
-    })
-    y += strBoxH + 4
+    doc.text(strLines, X + 9, y + 5)
+    y += strH + 4
   }
 
-  // ── Tools ───────────────────────────────────────────────────────────────────
+  // ── TOOLS ──────────────────────────────────────────────────────────────────
 
   if (tools.length) {
-    y = sectionHeader(doc, 'Tooling & methods', CARD_X + 5, y, COL_W - 10, t.section.color, t.section.borderBottom.replace('0.5px solid ', ''))
-
-    let tx = CARD_X + 5
+    section('Tooling & methods')
+    let tx = X + 5
     tools.forEach(tool => {
+      doc.setFont(F, 'bold')
       doc.setFontSize(6.5)
       const tw = doc.getTextWidth(tool) + 8
-      if (tx + tw > CARD_X + COL_W - 5) { tx = CARD_X + 5; y += 9 }
-      setFill(doc, '#edeae6')
+      if (tx + tw > X + W - 5) { tx = X + 5; y += 9 }
+      fill(doc, C.toolBg)
       doc.roundedRect(tx, y, tw, 6.5, 1, 1, 'F')
-      setTextColor(doc, '#403830')
-      doc.setFont(FONT, 'bold')
+      drw(doc, C.toolBdr)
+      doc.setLineWidth(0.2)
+      doc.roundedRect(tx, y, tw, 6.5, 1, 1, 'S')
+      txt(doc, C.toolText)
       doc.text(tool, tx + tw / 2, y + 4.5, { align: 'center' })
       tx += tw + 3
     })
     y += 12
   }
 
-  // ── Credentials ─────────────────────────────────────────────────────────────
+  // ── CREDENTIALS ────────────────────────────────────────────────────────────
 
   if (credentials.length) {
-    y = sectionHeader(doc, 'Education & credentials', CARD_X + 5, y, COL_W - 10, t.section.color, t.section.borderBottom.replace('0.5px solid ', ''))
-
+    section('Education & credentials')
     credentials.forEach(c => {
-      setTextColor(doc, '#a09080')
-      doc.setFont(FONT, 'bold')
-      doc.setFontSize(6)
-      doc.text(c.type?.toUpperCase() || '', CARD_X + 5, y + 4)
+      const typeLabel = (c.type || '').toUpperCase()
 
-      setTextColor(doc, '#1a1410')
-      doc.setFont(FONT, 'bold')
+      txt(doc, C.credType)
+      doc.setFont(F, 'bold')
+      doc.setFontSize(6)
+      doc.text(typeLabel, X + 5, y + 4)
+      const typeW = doc.getTextWidth(typeLabel + ' ')
+
+      txt(doc, C.credName)
+      doc.setFont(F, 'bold')
       doc.setFontSize(8)
-      const typeW = doc.getTextWidth((c.type?.toUpperCase() || '') + '  ')
-      doc.text(c.name || '', CARD_X + 5 + typeW + 2, y + 4)
+      doc.text(c.name || '', X + 7 + typeW, y + 4)
+      const nameW = doc.getTextWidth(c.name || '')
 
       if (c.institution || c.year) {
-        setTextColor(doc, '#706050')
-        doc.setFont(FONT, 'normal')
+        txt(doc, C.credSub)
+        doc.setFont(F, 'normal')
         doc.setFontSize(7.5)
         const extra = [c.institution, c.year].filter(Boolean).join(' · ')
-        doc.text(` · ${extra}`, CARD_X + 5 + typeW + 2 + doc.getTextWidth(c.name || '') + 1, y + 4)
+        doc.text(` · ${extra}`, X + 7 + typeW + nameW, y + 4)
       }
-      y += 8
+      y += 9
     })
+    y += 2
   }
 
-  y += 4
+  // ── FOOTER ─────────────────────────────────────────────────────────────────
 
-  // ── Draw body background behind everything ───────────────────────────────────
-
-  const bodyH = y - bodyStartY
-  setFill(doc, t.body.background)
-  doc.rect(CARD_X, bodyStartY, COL_W, bodyH, 'F')
-
-  // Re-draw content on top of background by saving/restoring isn't possible in jsPDF,
-  // so instead we set background first then redraw all body content.
-  // Simple workaround: draw body bg, then re-call the drawing.
-  // Actually jsPDF draws in order, so we need to draw background first.
-  // The approach here is acceptable for a testing/download tool.
-
-  // ── Footer ──────────────────────────────────────────────────────────────────
-
-  setFill(doc, t.footer.background)
-  doc.rect(CARD_X, y, COL_W, 10, 'F')
-  setDrawColor(doc, t.footer.borderTop.replace('0.5px solid ', ''))
+  fill(doc, C.footerBg)
+  doc.rect(X, y, W, 10, 'F')
+  drw(doc, C.divider)
   doc.setLineWidth(0.2)
-  doc.line(CARD_X, y, CARD_X + COL_W, y)
+  doc.line(X, y, X + W, y)
 
-  setTextColor(doc, t.footerLeft.color)
-  doc.setFont(FONT, 'normal')
+  txt(doc, C.footerLeft)
+  doc.setFont(F, 'normal')
   doc.setFontSize(6.5)
-  doc.text('Candidate-owned · read-only for recruiters', CARD_X + 5, y + 6.5)
+  doc.text('Candidate-owned · read-only for recruiters', X + 5, y + 6.5)
 
-  setTextColor(doc, t.footerRight.color)
-  doc.setFont(FONT, 'bold')
+  txt(doc, C.footerRight)
+  doc.setFont(F, 'bold')
   doc.setFontSize(6.5)
-  doc.text('RENSUME', CARD_X + COL_W - 5, y + 6.5, { align: 'right' })
+  doc.text('RENSUME', X + W - 5, y + 6.5, { align: 'right' })
 
-  // ── Save ────────────────────────────────────────────────────────────────────
+  // ── SAVE ───────────────────────────────────────────────────────────────────
 
-  const filename = `rensume-card-${themeName}-${Date.now()}.pdf`
-  doc.save(filename)
+  doc.save(`rensume-card-${themeName}-${Date.now()}.pdf`)
 }
