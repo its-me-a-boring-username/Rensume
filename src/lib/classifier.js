@@ -84,6 +84,12 @@ For industry evidence:
 
 //function levels//
 CRITICAL for function evidence: The evidence must justify WHY this specific function level applies
+CRITICAL for function classification: Function levels are independent and mutually exclusive in what they 
+describe. Do NOT infer a higher function level by combining evidence 
+from two lower levels. Each function level must be justified by its 
+own direct evidence. If a candidate shows both People Manager work 
+and Strategic Advisor work, credit both separately — do not upgrade 
+either to Strategic Manager.
 Function levels list:
 Process Specialist - Executes defined processes
 Process Manager - Improves and manages processes
