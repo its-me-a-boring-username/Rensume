@@ -1,7 +1,13 @@
 // src/lib/generatePdf.js
 // Rensume card PDF — jsPDF, A4, Bordeaux theme.
-// All sections use style A (left accent bar).
-// Summary in Times italic for editorial contrast with Helvetica body.
+// Two-column layout:
+//   Left  — Function (bar + evidence) + Knowledge Area (bar only)
+//   Right — Industry (bar only) + Strengths + Tools + Credentials
+//
+// Evidence rules:
+//   - Function: always show evidence
+//   - Knowledge area + Industry: label + years only, no evidence
+//   - One-page check: if full card exceeds one page, drop ALL evidence
 
 import { jsPDF } from 'jspdf'
 import { getSeniorityLabel } from './classifier'
@@ -17,8 +23,8 @@ const C = {
   sectionLabel: [80,  72,  64],
   divider:      [216, 208, 200],
   years:        [120, 110, 96],
-  barFn:        [44,  48,  56],    // dark slate bar for function
-  labelFn:      [32,  36,  44],    // darker slate — matches bar, same pattern as KA
+  barFn:        [44,  48,  56],
+  labelFn:      [32,  36,  44],
   barKa:        [144, 64,  96],
   labelKa:      [120, 48,  72],
   barInd:       [180, 172, 164],
@@ -54,19 +60,34 @@ const TIMES   = 'times'
 // ─── Typography ───────────────────────────────────────────────────────────────
 
 const T = {
-  logo:      { font: HELV,  style: 'bold',   pt: 8    },
-  summary:   { font: TIMES, style: 'italic', pt: 10.5 },  // Times italic — editorial
-  section:   { font: HELV,  style: 'bold',   pt: 7.5  },
-  barLabel:  { font: HELV,  style: 'bold',   pt: 10   },
-  barYears:  { font: HELV,  style: 'normal', pt: 9.5  },
-  evidence:  { font: HELV,  style: 'normal', pt: 9.5  },  // matches strengths
-  strengths: { font: HELV,  style: 'normal', pt: 9.5  },
-  tool:      { font: HELV,  style: 'bold',   pt: 8.5  },
-  credType:  { font: HELV,  style: 'bold',   pt: 7    },
-  credName:  { font: HELV,  style: 'bold',   pt: 10   },
-  credSub:   { font: HELV,  style: 'normal', pt: 8.5  },
-  footer:    { font: HELV,  style: 'normal', pt: 7    },
+  logo:      { font: HELV,  style: 'bold',   pt: 8   },
+  summary:   { font: TIMES, style: 'italic', pt: 9   },
+  section:   { font: HELV,  style: 'bold',   pt: 7.5 },
+  barLabel:  { font: HELV,  style: 'bold',   pt: 10  },
+  barYears:  { font: HELV,  style: 'normal', pt: 9.5 },
+  evidence:  { font: HELV,  style: 'normal', pt: 9   },
+  strengths: { font: HELV,  style: 'normal', pt: 9   },
+  tool:      { font: HELV,  style: 'bold',   pt: 8.5 },
+  credType:  { font: HELV,  style: 'bold',   pt: 7   },
+  credName:  { font: HELV,  style: 'bold',   pt: 10  },
+  credSub:   { font: HELV,  style: 'normal', pt: 8.5 },
+  footer:    { font: HELV,  style: 'normal', pt: 7   },
 }
+
+// ─── Spacing — single source of truth ────────────────────────────────────────
+// Consistent rhythm matching the Lyminal layout feel.
+
+const SP = {
+  barH:          lhFn(T.barLabel.pt, 1.9),  // bar row height
+  barToEvidence: 3.5,   // gap: bar bottom → first evidence line
+  evidenceLH:    lhFn(T.evidence.pt, 1.55), // evidence line height
+  evidenceToNext:3.5,   // gap: last evidence line → next item
+  noEvidenceGap: 4,     // gap between items when no evidence
+  sectionToFirst:9,     // section heading → first item
+  sectionGap:    6,     // gap before a new section heading
+}
+
+function lhFn(pt, ratio) { return pt * 0.3528 * ratio }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -105,16 +126,91 @@ function parseEvidence(str) {
     .filter(Boolean)
 }
 
+// ─── Estimate total content height (dry run) ──────────────────────────────────
+// Returns estimated height of all content with function evidence included.
+// Used to decide whether to show evidence or not.
+
+function estimateHeight(doc, profile, bodyStartY, hdrH) {
+  const {
+    functions = [], knowledge_areas = [], industries = [],
+    strengths = '', tools = [], credentials = [],
+  } = profile
+
+  const ITEM_GAP    = SP.noEvidenceGap
+  const SECTION_GAP = SP.sectionGap + 9  // approx section heading height
+
+  // Left column estimate
+  let leftH = bodyStartY
+
+  if (functions.length) {
+    leftH += SECTION_GAP
+    functions.forEach(fn => {
+      const BAR_H = SP.barH
+      const evLines = parseEvidence(fn.evidence)
+      let evH = 0
+      if (evLines.length > 0) {
+        sf(doc, T.evidence)
+        const wrapped = evLines.flatMap(l => doc.splitTextToSize(l, COL_W - 8))
+        evH = SP.barToEvidence + wrapped.length * SP.evidenceLH + SP.evidenceToNext
+      }
+      leftH += BAR_H + evH + ITEM_GAP
+    })
+  }
+
+  if (knowledge_areas.length) {
+    leftH += SECTION_GAP
+    leftH += knowledge_areas.length * (SP.barH + ITEM_GAP)
+  }
+
+  // Right column estimate
+  let rightH = bodyStartY
+
+  if (industries.length) {
+    rightH += SECTION_GAP
+    rightH += industries.length * (SP.barH + ITEM_GAP)
+  }
+
+  if (strengths) {
+    sf(doc, T.strengths)
+    const strLines = doc.splitTextToSize(strengths, COL_W - 9)
+    rightH += SECTION_GAP + strLines.length * lh(T.strengths.pt, 1.55) + 11 + 7
+  }
+
+  if (tools.length) {
+    const CHIP_H = 7
+    const CHIP_PX = 5
+    const CHIP_GAP = 3
+    let tx = 0
+    let rows = 1
+    tools.forEach(tool => {
+      sf(doc, T.tool)
+      const tw = doc.getTextWidth(tool) + CHIP_PX * 2
+      if (tx + tw > COL_W) { rows++; tx = 0 }
+      tx += tw + CHIP_GAP
+    })
+    rightH += SECTION_GAP + rows * (CHIP_H + CHIP_GAP) + 7
+  }
+
+  if (credentials.length) {
+    rightH += SECTION_GAP
+    credentials.forEach(cred => {
+      rightH += lh(T.credType.pt, 1.7)
+        + lh(T.credName.pt, 1.4)
+        + (cred.institution || cred.year ? lh(T.credSub.pt, 1.4) : 0)
+        + 5
+    })
+  }
+
+  return Math.max(leftH, rightH)
+}
+
 // ─── Column factory ───────────────────────────────────────────────────────────
 
 function makeColumn(doc, colX, startPage, reusePages) {
   let y    = 0
   let page = startPage
 
-  function goToPage(p) {
-    page = p
-    doc.setPage(p)
-  }
+  function goToPage(p) { page = p; doc.setPage(p) }
 
   function checkPage(needed = 18) {
     if (y + needed > FOOT_Y - 4) {
@@ -139,28 +235,28 @@ function makeColumn(doc, colX, startPage, reusePages) {
     doc.setDrawColor(...C.divider)
     doc.setLineWidth(0.3)
     doc.line(colX, y + 3, colX + COL_W, y + 3)
-    y += 9
+    y += SP.sectionToFirst
   }
 
-  // Style A — left accent bar, used for ALL sections
-  function barRow(label, yearsVal, barColor, labelColor, evidence) {
+  // Bar row — showEvidence flag controls whether evidence is rendered
+  function barRow(label, yearsVal, barColor, labelColor, evidence, showEvidence) {
     const BAR_W  = 3.5
     const BAR_R  = 1
-    const ROW_H  = lh(T.barLabel.pt, 1.9)
-    const EV_LH  = lh(T.evidence.pt, 1.5)
+    const ROW_H  = SP.barH
 
-    // Measure evidence before drawing
-    const evLines = parseEvidence(evidence)
     let evWrapped = []
-    if (evLines.length > 0) {
-      sf(doc, T.evidence)
-      evWrapped = evLines.flatMap(line =>
-        doc.splitTextToSize(line, COL_W - BAR_W - 7)
-      )
+    if (showEvidence && evidence) {
+      const evLines = parseEvidence(evidence)
+      if (evLines.length > 0) {
+        sf(doc, T.evidence)
+        evWrapped = evLines.flatMap(l => doc.splitTextToSize(l, COL_W - BAR_W - 7))
+      }
     }
-    const evBlockH = evWrapped.length > 0 ? evWrapped.length * EV_LH + 3 : 0
+    const evBlockH = evWrapped.length > 0
+      ? SP.barToEvidence + evWrapped.length * SP.evidenceLH + SP.evidenceToNext
+      : 0
 
-    checkPage(ROW_H + evBlockH + 6)
+    checkPage(ROW_H + evBlockH + SP.noEvidenceGap)
 
     // Bar
     doc.setFillColor(...barColor)
@@ -176,17 +272,17 @@ function makeColumn(doc, colX, startPage, reusePages) {
     doc.setTextColor(...C.years)
     doc.text(`${yearsVal}y`, colX + COL_W, y + ROW_H / 2 + lh(T.barYears.pt, 0.38), { align: 'right' })
 
-    y += ROW_H + 4     // tightened: was 5.5
+    y += ROW_H
 
-    // Evidence
     if (evWrapped.length > 0) {
+      y += SP.barToEvidence
       sf(doc, T.evidence)
       doc.setTextColor(...C.evidenceText)
-      evWrapped.forEach(line => { doc.text(line, colX + BAR_W + 5, y); y += EV_LH })
-      y += 2           // tightened: was 3
+      evWrapped.forEach(line => { doc.text(line, colX + BAR_W + 5, y); y += SP.evidenceLH })
+      y += SP.evidenceToNext
+    } else {
+      y += SP.noEvidenceGap
     }
-
-    y += 3             // tightened: was 5
   }
 
   return {
@@ -244,6 +340,10 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
 
   const BODY_Y = HDR_H + ACC_H + 10
 
+  // ── Dry run: decide whether to show function evidence ─────────────────────
+  const estimatedH = estimateHeight(doc, profile, BODY_Y, HDR_H)
+  const showEvidence = estimatedH <= FOOT_Y
+
   // ── LEFT column ────────────────────────────────────────────────────────────
   const left = makeColumn(doc, COL_L, 1, false)
   left.setY(BODY_Y)
@@ -254,22 +354,22 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       left.barRow(
         getSeniorityLabel(fn.name, fn.years),
         fn.years,
-        C.barFn,
-        C.labelFn,
-        fn.evidence
+        C.barFn, C.labelFn,
+        fn.evidence,
+        showEvidence   // function evidence respects the one-page rule
       )
     )
-    left.setY(left.getY() + 2)
+    left.setY(left.getY() + SP.sectionGap)
   }
 
   if (knowledge_areas.length) {
     left.section('Knowledge Area')
     knowledge_areas.forEach(ka =>
-      left.barRow(ka.name, ka.years, C.barKa, C.labelKa, ka.evidence)
+      left.barRow(ka.name, ka.years, C.barKa, C.labelKa, null, false)  // never evidence
     )
   }
 
-  // ── RIGHT column — reset to page 1, reuse existing pages ──────────────────
+  // ── RIGHT column ───────────────────────────────────────────────────────────
   const right = makeColumn(doc, COL_R, 1, true)
   doc.setPage(1)
   right.setY(BODY_Y)
@@ -277,9 +377,9 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
   if (industries.length) {
     right.section('Industry')
     industries.forEach(ind =>
-      right.barRow(ind.name, ind.years, C.barInd, C.labelInd, ind.evidence)
+      right.barRow(ind.name, ind.years, C.barInd, C.labelInd, null, false)  // never evidence
     )
-    right.setY(right.getY() + 2)
+    right.setY(right.getY() + SP.sectionGap)
   }
 
   // Strengths
@@ -293,7 +393,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     doc.setDrawColor(...C.divider)
     doc.setLineWidth(0.3)
     doc.line(COL_R, ry + 3, COL_R + COL_W, ry + 3)
-    ry += 9
+    ry += SP.sectionToFirst
 
     sf(doc, T.strengths)
     const strLines = doc.splitTextToSize(strengths, COL_W - 9)
@@ -308,7 +408,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     strLines.forEach((line, i) =>
       doc.text(line, COL_R + 5, ry + BOX_PY + STR_LH * 0.82 + i * STR_LH)
     )
-    right.setY(ry + boxH + 7)
+    right.setY(ry + boxH + SP.sectionGap + 2)
   }
 
   // Tools
@@ -322,7 +422,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     doc.setDrawColor(...C.divider)
     doc.setLineWidth(0.3)
     doc.line(COL_R, ry + 3, COL_R + COL_W, ry + 3)
-    right.setY(ry + 9)
+    right.setY(ry + SP.sectionToFirst)
 
     const CHIP_H   = 7
     const CHIP_PX  = 5
@@ -348,7 +448,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       doc.text(tool, tx + tw / 2, ry + CHIP_H / 2 + lh(T.tool.pt, 0.38), { align: 'center' })
       tx += tw + CHIP_GAP
     })
-    right.setY(right.getY() + CHIP_H + 7)
+    right.setY(right.getY() + CHIP_H + SP.sectionGap + 2)
   }
 
   // Credentials
@@ -362,7 +462,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     doc.setDrawColor(...C.divider)
     doc.setLineWidth(0.3)
     doc.line(COL_R, ry + 3, COL_R + COL_W, ry + 3)
-    ry += 9
+    ry += SP.sectionToFirst
     right.setY(ry)
 
     credentials.forEach(cred => {
@@ -404,3 +504,6 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
 
   doc.save(`rensume-card-${themeName}-${Date.now()}.pdf`)
 }
+
+// Needed at module level for SP initialisation above
+function lhFn(pt, ratio) { return pt * 0.3528 * ratio }
