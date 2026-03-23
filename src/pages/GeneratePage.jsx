@@ -9,6 +9,7 @@ import Card from '../components/Card'
 import ThemePicker from '../components/ThemePicker'
 import SaveOptions from '../components/SaveOptions'
 import ReviewPanel from '../components/ReviewPanel'
+import { downloadCardPdf } from '../lib/generatePdf'
 
 // ─── Keyframe animations (injected once) ─────────────────────────────────────
 
@@ -195,11 +196,9 @@ export default function GeneratePage() {
     if (!profile) return
     setDownloading(true)
     try {
-      if (saveMode === 'save') {
-        console.log('Save + download — account creation flow coming next')
-      } else {
-        console.log('Download only — PDF generation coming next')
-      }
+      downloadCardPdf(profile, theme)
+    } catch (e) {
+      console.error('PDF generation failed:', e)
     } finally {
       setDownloading(false)
     }
