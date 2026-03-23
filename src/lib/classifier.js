@@ -67,28 +67,29 @@ Extract all dimensions and respond ONLY with valid JSON, no markdown, no preambl
 //math//
 total_months: calculate from actual work history dates, not self-reported summaries. Return as total months (e.g. 8 years = 96 months).
 Function months: reflect time spent operating at that level — they do NOT need to sum to total_months. A candidate can operate at multiple function levels within the same role simultaneously.
-// Industry months: do NOT need to sum to total_months. A company can map to multiple industries simultaneously (e.g. a fintech company counts toward both Information and Finance & Insurance).
-// Knowledge Area months: do NOT need to sum to total_months. A role can draw on multiple knowledge areas simultaneously.
+Industry months: do NOT need to sum to total_months. A company can map to multiple industries simultaneously (e.g. a fintech company counts toward both Information and Finance & Insurance).
+Knowledge Area months: do NOT need to sum to total_months. A single role may require expertise in multiple knowledge areas at once. It is also possible for someone to hold multiple roles at one time.
 
 //evidence handling//
-For ALL Evidence:
+For ALL Evidence: 
 - Only use AI synthesis (clearly marked with 'Based on...') when no specific resume text supports the classification.
 - Do NOT reuse the same quote across multiple functions or knowledge areas
-For function field evidence:
-- ALWAYS prefer a direct quote or paraphrase from the resume.
-- Use single quotes not double quotes inside evidence text.
-For knowledge area evidence:
-- provide 2-4 bullet points of evidence using partial quotes from the resume, each tagged with company and role. Format as: "· Company (Role): 'partial quote or paraphrase'" separated by the · character.
-For industry evidence:
+For function field evidence: 
+- ALWAYS prefer a direct quote or paraphrase from the resume. 
+- Use single quotes not double quotes inside evidence text. 
+For knowledge area evidence: 
+- provide 2-4 bullet points of evidence using partial quotes from the resume, each tagged with company and role. Format as: "· Company (Role): 'partial quote or paraphrase'" separated by the · character. 
+For industry evidence: 
 - One sentence explaining which companies map to this industry and why.
 
 //function levels//
-CRITICAL for function evidence: The evidence must justify WHY this specific function level applies
+CRITICAL for function evidence: The evidence must justify WHY this specific function level applies.
+CRITICAL for function classification: Function levels are independent and mutually exclusive in what they describe. Do NOT infer a higher function level by combining evidence from two lower levels. Each function level must be justified by its own direct evidence. If a candidate shows both People Manager work and Strategic Advisor work, credit both separately — do not upgrade either to Strategic Manager. Do NOT suppress a valid lower-level function tag because a higher one is also present.
 Function levels list:
 Process Specialist - Executes defined processes
 Process Manager - Improves and manages processes
-People Manager - Manages who does the work
-Strategic Manager - Manages people executing strategy-linked initiatives
+People Manager - Manages a team of individual contributors who execute defined processes
+Strategic Manager - Manages multiple teams or managers executing strategy-linked initiatives
 Strategic Advisor - Recommends what should happen. No binding authority
 Strategic Executive - Decides what should happen. Binding authority
 
@@ -120,7 +121,8 @@ Extract Knowledge Area / Discipline using SOC 2018 minor group names.
 - DO NOT collapse distinct types of work into a single category. Each meaningfully different domain must appear as its own entry. Treat overlap as separate dimensions, not a reason to consolidate.
 - DO NOT create additional catch-all categories — compliance, customer operations, and data analysis are separate.
 - Return between 3 and 6 knowledge areas — no more, no fewer.
-// Knowledge area months do NOT need to sum to total_months. A role can draw on multiple knowledge areas simultaneously.
+- Knowledge area months do NOT need to sum to total_months. A role can draw on multiple knowledge areas simultaneously.
+- The candidate has ${totalMonths} total professional months for context when estimating time in each area.
 
 Use only these SOC 2018 minor group names:
 ${SOC_MINOR_GROUPS.join(', ')}
@@ -155,10 +157,6 @@ function convertMonthsToYears(items) {
     years: monthsToYears(i.months),
   }))
 }
-
-// normalizeYears is no longer used — months-based calculation eliminates
-// the need to force items to sum to a total. Kept here for reference.
-// function normalizeYears(items, totalYears) { ... }
 
 /**
  * Apply seniority band prefix to a function level name.
@@ -233,7 +231,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   onProgress('Extracting your profile...')
   const shared = await callAPI(SHARED_SYSTEM, prompt)
   const totalMonths = Number(shared.total_months) || 0
-  const totalYears = monthsToYears(totalMonths)
+  const totalYears  = monthsToYears(totalMonths)
 
   // Call 2 — knowledge areas
   onProgress('Classifying knowledge areas...')
@@ -246,15 +244,15 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
 
   // Return a profile shaped to match the `cards` table schema
   return {
-    summary:        shared.summary        || '',
-    strengths:      shared.strengths      || '',
-    total_years:    totalYears,
-    total_months:   totalMonths,
-    functions:      shared.functions      || [],
-    knowledge_areas: knowledgeAreas       || [],
-    industries:     shared.industries     || [],
-    tools:          shared.tools          || [],
-    credentials:    shared.credentials    || [],
-    framework:      'soc_minor',
+    summary:         shared.summary   || '',
+    strengths:       shared.strengths || '',
+    total_years:     totalYears,
+    total_months:    totalMonths,
+    functions:       shared.functions      || [],
+    knowledge_areas: knowledgeAreas        || [],
+    industries:      shared.industries     || [],
+    tools:           shared.tools          || [],
+    credentials:     shared.credentials    || [],
+    framework:       'soc_minor',
   }
 }
