@@ -1,11 +1,7 @@
 // src/lib/generatePdf.js
 // Rensume card PDF — jsPDF, A4, Bordeaux theme.
-// Two-column layout:
-//   Left  — Function (square tag) + Knowledge Area (accent bar)
-//   Right — Industry (neutral bar) + Strengths + Tools + Credentials
-//
-// Page sync: left column drawn first (may span pages), then right column
-// resets to page 1 and uses existing pages before adding new ones.
+// All sections use style A (left accent bar).
+// Summary in Times italic for editorial contrast with Helvetica body.
 
 import { jsPDF } from 'jspdf'
 import { getSeniorityLabel } from './classifier'
@@ -21,9 +17,8 @@ const C = {
   sectionLabel: [80,  72,  64],
   divider:      [216, 208, 200],
   years:        [120, 110, 96],
-  tagFnBg:      [44,  48,  56],
-  tagFnText:    [200, 112, 144],
-  tagFnYears:   [200, 112, 144],
+  barFn:        [44,  48,  56],    // dark slate bar for function
+  labelFn:      [32,  36,  44],    // darker slate — matches bar, same pattern as KA
   barKa:        [144, 64,  96],
   labelKa:      [120, 48,  72],
   barInd:       [180, 172, 164],
@@ -53,32 +48,31 @@ const COL_R   = MARGIN + COL_W + GUTTER
 const ACC_H   = 2
 const FOOT_H  = 9
 const FOOT_Y  = PAGE_H - FOOT_H
-const FONT    = 'helvetica'
+const HELV    = 'helvetica'
+const TIMES   = 'times'
 
 // ─── Typography ───────────────────────────────────────────────────────────────
 
 const T = {
-  logo:      { style: 'bold',   pt: 8    },
-  summary:   { style: 'normal', pt: 10   },
-  section:   { style: 'bold',   pt: 7.5  },
-  tag:       { style: 'bold',   pt: 10   },
-  tagYears:  { style: 'normal', pt: 9.5  },
-  barLabel:  { style: 'bold',   pt: 10   },
-  barYears:  { style: 'normal', pt: 9.5  },
-  evidence:  { style: 'normal', pt: 8    },
-  strengths: { style: 'normal', pt: 9.5  },
-  tool:      { style: 'bold',   pt: 8.5  },
-  credType:  { style: 'bold',   pt: 7    },
-  credName:  { style: 'bold',   pt: 10   },
-  credSub:   { style: 'normal', pt: 8.5  },
-  footer:    { style: 'normal', pt: 7    },
+  logo:      { font: HELV,  style: 'bold',   pt: 8    },
+  summary:   { font: TIMES, style: 'italic', pt: 10.5 },  // Times italic — editorial
+  section:   { font: HELV,  style: 'bold',   pt: 7.5  },
+  barLabel:  { font: HELV,  style: 'bold',   pt: 10   },
+  barYears:  { font: HELV,  style: 'normal', pt: 9.5  },
+  evidence:  { font: HELV,  style: 'normal', pt: 9.5  },  // matches strengths
+  strengths: { font: HELV,  style: 'normal', pt: 9.5  },
+  tool:      { font: HELV,  style: 'bold',   pt: 8.5  },
+  credType:  { font: HELV,  style: 'bold',   pt: 7    },
+  credName:  { font: HELV,  style: 'bold',   pt: 10   },
+  credSub:   { font: HELV,  style: 'normal', pt: 8.5  },
+  footer:    { font: HELV,  style: 'normal', pt: 7    },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function sf(doc, style, pt) {
-  doc.setFont(FONT, style)
-  doc.setFontSize(pt)
+function sf(doc, t) {
+  doc.setFont(t.font, t.style)
+  doc.setFontSize(t.pt)
 }
 
 function lh(pt, ratio = 1.5) {
@@ -94,10 +88,10 @@ function drawFooter(doc) {
   doc.setDrawColor(...C.divider)
   doc.setLineWidth(0.3)
   doc.line(MARGIN, FOOT_Y, MARGIN + COL_W * 2 + GUTTER, FOOT_Y)
-  sf(doc, 'normal', T.footer.pt)
+  sf(doc, T.footer)
   doc.setTextColor(...C.footerLeft)
   doc.text('Candidate-owned · read-only for recruiters', MARGIN, FOOT_Y + 5.5)
-  sf(doc, 'bold', T.footer.pt)
+  doc.setFont(HELV, 'bold')
   doc.setTextColor(...C.footerRight)
   doc.text('RENSUME', MARGIN + COL_W * 2 + GUTTER, FOOT_Y + 5.5, { align: 'right' })
 }
@@ -112,10 +106,6 @@ function parseEvidence(str) {
 }
 
 // ─── Column factory ───────────────────────────────────────────────────────────
-// startPage: which page this column begins on (left=1, right=1 after reset)
-// reusePages: if true, use doc.setPage() to navigate existing pages instead of
-//             always calling addPage(). Used by the right column so it fills
-//             pages the left column already created.
 
 function makeColumn(doc, colX, startPage, reusePages) {
   let y    = 0
@@ -129,9 +119,9 @@ function makeColumn(doc, colX, startPage, reusePages) {
   function checkPage(needed = 18) {
     if (y + needed > FOOT_Y - 4) {
       drawFooter(doc)
-      const nextPage = page + 1
-      if (reusePages && nextPage <= doc.getNumberOfPages()) {
-        goToPage(nextPage)
+      const next = page + 1
+      if (reusePages && next <= doc.getNumberOfPages()) {
+        goToPage(next)
       } else {
         doc.addPage()
         page = doc.getNumberOfPages()
@@ -143,7 +133,7 @@ function makeColumn(doc, colX, startPage, reusePages) {
 
   function section(label) {
     checkPage(20)
-    sf(doc, T.section.style, T.section.pt)
+    sf(doc, T.section)
     doc.setTextColor(...C.sectionLabel)
     doc.text(label.toUpperCase(), colX, y)
     doc.setDrawColor(...C.divider)
@@ -152,90 +142,59 @@ function makeColumn(doc, colX, startPage, reusePages) {
     y += 9
   }
 
-  // Style B — full-width square tag (function levels)
-  function tagRow(label, yearsVal, evidence) {
-    const TAG_H  = 9.5
-    const TAG_PX = 6
-    const EV_LH  = lh(T.evidence.pt, 1.6)
-
-    const evLines = parseEvidence(evidence)
-    let evWrapped = []
-    if (evLines.length > 0) {
-      sf(doc, T.evidence.style, T.evidence.pt)
-      evWrapped = evLines.flatMap(line => doc.splitTextToSize(line, COL_W - 4))
-    }
-    const evBlockH = evWrapped.length > 0 ? evWrapped.length * EV_LH + 5 : 0
-
-    checkPage(TAG_H + evBlockH + 8)
-
-    doc.setFillColor(...C.tagFnBg)
-    doc.rect(colX, y, COL_W, TAG_H, 'F')
-
-    sf(doc, T.tag.style, T.tag.pt)
-    doc.setTextColor(...C.tagFnText)
-    doc.text(label, colX + TAG_PX, y + TAG_H / 2 + lh(T.tag.pt, 0.38))
-
-    sf(doc, T.tagYears.style, T.tagYears.pt)
-    doc.setTextColor(...C.tagFnYears)
-    doc.text(`${yearsVal}y`, colX + COL_W - TAG_PX, y + TAG_H / 2 + lh(T.tagYears.pt, 0.38), { align: 'right' })
-
-    y += TAG_H + 5.5
-
-    if (evWrapped.length > 0) {
-      sf(doc, T.evidence.style, T.evidence.pt)
-      doc.setTextColor(...C.evidenceText)
-      evWrapped.forEach(line => { doc.text(line, colX + 4, y); y += EV_LH })
-      y += 3
-    }
-    y += 5
-  }
-
-  // Style A — left accent bar (knowledge area + industry)
+  // Style A — left accent bar, used for ALL sections
   function barRow(label, yearsVal, barColor, labelColor, evidence) {
     const BAR_W  = 3.5
     const BAR_R  = 1
     const ROW_H  = lh(T.barLabel.pt, 1.9)
-    const EV_LH  = lh(T.evidence.pt, 1.6)
+    const EV_LH  = lh(T.evidence.pt, 1.5)
 
+    // Measure evidence before drawing
     const evLines = parseEvidence(evidence)
     let evWrapped = []
     if (evLines.length > 0) {
-      sf(doc, T.evidence.style, T.evidence.pt)
-      evWrapped = evLines.flatMap(line => doc.splitTextToSize(line, COL_W - BAR_W - 7))
+      sf(doc, T.evidence)
+      evWrapped = evLines.flatMap(line =>
+        doc.splitTextToSize(line, COL_W - BAR_W - 7)
+      )
     }
-    const evBlockH = evWrapped.length > 0 ? evWrapped.length * EV_LH + 4 : 0
+    const evBlockH = evWrapped.length > 0 ? evWrapped.length * EV_LH + 3 : 0
 
-    checkPage(ROW_H + evBlockH + 8)
+    checkPage(ROW_H + evBlockH + 6)
 
+    // Bar
     doc.setFillColor(...barColor)
     doc.roundedRect(colX, y, BAR_W, ROW_H, BAR_R, BAR_R, 'F')
 
-    sf(doc, T.barLabel.style, T.barLabel.pt)
+    // Label
+    sf(doc, T.barLabel)
     doc.setTextColor(...labelColor)
     doc.text(label, colX + BAR_W + 5, y + ROW_H / 2 + lh(T.barLabel.pt, 0.38))
 
-    sf(doc, T.barYears.style, T.barYears.pt)
+    // Years
+    sf(doc, T.barYears)
     doc.setTextColor(...C.years)
     doc.text(`${yearsVal}y`, colX + COL_W, y + ROW_H / 2 + lh(T.barYears.pt, 0.38), { align: 'right' })
 
-    y += ROW_H + 5.5
+    y += ROW_H + 4     // tightened: was 5.5
 
+    // Evidence
     if (evWrapped.length > 0) {
-      sf(doc, T.evidence.style, T.evidence.pt)
+      sf(doc, T.evidence)
       doc.setTextColor(...C.evidenceText)
       evWrapped.forEach(line => { doc.text(line, colX + BAR_W + 5, y); y += EV_LH })
-      y += 3
+      y += 2           // tightened: was 3
     }
-    y += 5
+
+    y += 3             // tightened: was 5
   }
 
   return {
-    setY:      v  => { y = v },
-    getY:      () => y,
-    getPage:   () => page,
+    setY:    v  => { y = v },
+    getY:    () => y,
+    getPage: () => page,
     goToPage,
     section,
-    tagRow,
     barRow,
     checkPage,
   }
@@ -256,11 +215,10 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     credentials     = [],
   } = profile
 
-  // ── Page 1 background ─────────────────────────────────────────────────────
   paintBodyBg(doc)
 
-  // ── Header — measure summary first ────────────────────────────────────────
-  sf(doc, T.summary.style, T.summary.pt)
+  // ── Header ─────────────────────────────────────────────────────────────────
+  sf(doc, T.summary)
   const sumLines = doc.splitTextToSize(summary, PAGE_W - MARGIN * 2 - 2)
   const SUM_LH   = lh(T.summary.pt, 1.5)
   const PAD_T    = 8
@@ -272,11 +230,11 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
   doc.setFillColor(...C.headerBg)
   doc.rect(0, 0, PAGE_W, HDR_H, 'F')
 
-  sf(doc, T.logo.style, T.logo.pt)
+  sf(doc, T.logo)
   doc.setTextColor(...C.logoText)
   doc.text('RENSUME · TAXONOMY PROFILE', MARGIN, PAD_T + LOGO_H)
 
-  sf(doc, T.summary.style, T.summary.pt)
+  sf(doc, T.summary)
   doc.setTextColor(...C.summaryText)
   const sumY = PAD_T + LOGO_H + PAD_M + SUM_LH * 0.82
   sumLines.forEach((line, i) => doc.text(line, MARGIN, sumY + i * SUM_LH))
@@ -286,14 +244,20 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
 
   const BODY_Y = HDR_H + ACC_H + 10
 
-  // ── LEFT column — drawn first, reusePages=false (creates pages as needed) ─
+  // ── LEFT column ────────────────────────────────────────────────────────────
   const left = makeColumn(doc, COL_L, 1, false)
   left.setY(BODY_Y)
 
   if (functions.length) {
     left.section('Function')
     functions.forEach(fn =>
-      left.tagRow(getSeniorityLabel(fn.name, fn.years), fn.years, fn.evidence)
+      left.barRow(
+        getSeniorityLabel(fn.name, fn.years),
+        fn.years,
+        C.barFn,
+        C.labelFn,
+        fn.evidence
+      )
     )
     left.setY(left.getY() + 2)
   }
@@ -305,9 +269,9 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     )
   }
 
-  // ── RIGHT column — reset to page 1, reuse pages left column created ───────
+  // ── RIGHT column — reset to page 1, reuse existing pages ──────────────────
   const right = makeColumn(doc, COL_R, 1, true)
-  doc.setPage(1)         // jump back to page 1 before drawing right column
+  doc.setPage(1)
   right.setY(BODY_Y)
 
   if (industries.length) {
@@ -318,11 +282,12 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     right.setY(right.getY() + 2)
   }
 
+  // Strengths
   if (strengths) {
     right.checkPage(24)
     let ry = right.getY()
 
-    sf(doc, T.section.style, T.section.pt)
+    sf(doc, T.section)
     doc.setTextColor(...C.sectionLabel)
     doc.text('STRENGTHS', COL_R, ry)
     doc.setDrawColor(...C.divider)
@@ -330,7 +295,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     doc.line(COL_R, ry + 3, COL_R + COL_W, ry + 3)
     ry += 9
 
-    sf(doc, T.strengths.style, T.strengths.pt)
+    sf(doc, T.strengths)
     const strLines = doc.splitTextToSize(strengths, COL_W - 9)
     const STR_LH   = lh(T.strengths.pt, 1.55)
     const BOX_PY   = 5.5
@@ -338,7 +303,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
 
     doc.setFillColor(...C.strengthsBg)
     doc.rect(COL_R, ry, COL_W, boxH, 'F')
-    sf(doc, T.strengths.style, T.strengths.pt)
+    sf(doc, T.strengths)
     doc.setTextColor(...C.strengthsTxt)
     strLines.forEach((line, i) =>
       doc.text(line, COL_R + 5, ry + BOX_PY + STR_LH * 0.82 + i * STR_LH)
@@ -346,11 +311,12 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     right.setY(ry + boxH + 7)
   }
 
+  // Tools
   if (tools.length) {
     right.checkPage(24)
     let ry = right.getY()
 
-    sf(doc, T.section.style, T.section.pt)
+    sf(doc, T.section)
     doc.setTextColor(...C.sectionLabel)
     doc.text('TOOLING & METHODS', COL_R, ry)
     doc.setDrawColor(...C.divider)
@@ -364,7 +330,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     let tx = COL_R
 
     tools.forEach(tool => {
-      sf(doc, T.tool.style, T.tool.pt)
+      sf(doc, T.tool)
       const tw = doc.getTextWidth(tool) + CHIP_PX * 2
       if (tx + tw > COL_R + COL_W) {
         right.setY(right.getY() + CHIP_H + CHIP_GAP)
@@ -378,18 +344,19 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       doc.setLineWidth(0.2)
       doc.rect(tx, ry, tw, CHIP_H, 'S')
       doc.setTextColor(...C.toolText)
-      sf(doc, T.tool.style, T.tool.pt)
+      sf(doc, T.tool)
       doc.text(tool, tx + tw / 2, ry + CHIP_H / 2 + lh(T.tool.pt, 0.38), { align: 'center' })
       tx += tw + CHIP_GAP
     })
     right.setY(right.getY() + CHIP_H + 7)
   }
 
+  // Credentials
   if (credentials.length) {
     right.checkPage(22)
     let ry = right.getY()
 
-    sf(doc, T.section.style, T.section.pt)
+    sf(doc, T.section)
     doc.setTextColor(...C.sectionLabel)
     doc.text('EDUCATION & CREDENTIALS', COL_R, ry)
     doc.setDrawColor(...C.divider)
@@ -406,18 +373,18 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       const name      = cred.name || ''
       const sub       = [cred.institution, cred.year].filter(Boolean).join(' · ')
 
-      sf(doc, T.credType.style, T.credType.pt)
+      sf(doc, T.credType)
       doc.setTextColor(...C.credType)
       doc.text(typeLabel, COL_R, ry)
       ry += lh(T.credType.pt, 1.7)
 
-      sf(doc, T.credName.style, T.credName.pt)
+      sf(doc, T.credName)
       doc.setTextColor(...C.credName)
       const nameLines = doc.splitTextToSize(name, COL_W)
       nameLines.forEach(nl => { doc.text(nl, COL_R, ry); ry += lh(T.credName.pt, 1.4) })
 
       if (sub) {
-        sf(doc, T.credSub.style, T.credSub.pt)
+        sf(doc, T.credSub)
         doc.setTextColor(...C.credSub)
         const subLines = doc.splitTextToSize(sub, COL_W - 4)
         subLines.forEach(sl => { doc.text(sl, COL_R + 4, ry); ry += lh(T.credSub.pt, 1.4) })
@@ -428,7 +395,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     })
   }
 
-  // ── Footer on every page ───────────────────────────────────────────────────
+  // Footer on every page
   const total = doc.getNumberOfPages()
   for (let p = 1; p <= total; p++) {
     doc.setPage(p)
