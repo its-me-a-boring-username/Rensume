@@ -65,10 +65,10 @@ Extract all dimensions and respond ONLY with valid JSON, no markdown, no preambl
 
 ///THE RULES///
 //math//
-total_years: calculate from actual work history dates, not self-reported summaries
-Function years: reflect time spent operating at that level — they do NOT need to sum to total_years. A candidate can operate at multiple function levels within the same role simultaneously.
-Industry years: MUST sum to total_years.
-Knowledge Area years: MUST sum to total_years.
+total_months: calculate from actual work history dates, not self-reported summaries. Return as total months (e.g. 8 years = 96 months).
+Function months: reflect time spent operating at that level — they do NOT need to sum to total_months. A candidate can operate at multiple function levels within the same role simultaneously.
+// Industry months: do NOT need to sum to total_months. A company can map to multiple industries simultaneously (e.g. a fintech company counts toward both Information and Finance & Insurance).
+// Knowledge Area months: do NOT need to sum to total_months. A role can draw on multiple knowledge areas simultaneously.
 
 //evidence handling//
 For ALL Evidence:
@@ -84,17 +84,11 @@ For industry evidence:
 
 //function levels//
 CRITICAL for function evidence: The evidence must justify WHY this specific function level applies
-CRITICAL for function classification: Function levels are independent and mutually exclusive in what they 
-describe. Do NOT infer a higher function level by combining evidence 
-from two lower levels. Each function level must be justified by its 
-own direct evidence. If a candidate shows both People Manager work 
-and Strategic Advisor work, credit both separately — do not upgrade 
-either to Strategic Manager.
 Function levels list:
 Process Specialist - Executes defined processes
 Process Manager - Improves and manages processes
-People Manager - Manages a team of individual contributors who execute defined processes
-Strategic Manager - Manages multiple teams or managers executing strategy-linked initiatives
+People Manager - Manages who does the work
+Strategic Manager - Manages people executing strategy-linked initiatives
 Strategic Advisor - Recommends what should happen. No binding authority
 Strategic Executive - Decides what should happen. Binding authority
 
@@ -107,15 +101,15 @@ Industry classification is based on the following NAICS sectors: ${NAICS_SECTORS
 Respond ONLY with valid JSON matching this exact structure:
 {
   "summary": "one plain sentence describing what this person actually does",
-  "total_years": 0,
+  "total_months": 0,
   "strengths": "1-2 sentences highlighting what genuinely sets this candidate apart, referencing specific experience",
-  "functions": [{"name": "Function level name", "years": 0, "evidence": "evidence text"}],
-  "industries": [{"name": "NAICS sector", "years": 0, "evidence": "which companies map here and why"}],
+  "functions": [{"name": "Function level name", "months": 0, "evidence": "evidence text"}],
+  "industries": [{"name": "NAICS sector", "months": 0, "evidence": "which companies map here and why"}],
   "tools": ["tool or method name"],
   "credentials": [{"type": "Degree|Certification|License", "name": "", "institution": "", "year": ""}]
 }`
 
-function buildKnowledgeAreaSystem(totalYears) {
+function buildKnowledgeAreaSystem(totalMonths) {
   return `///TASK DESCRIPTION///
 You are a resume taxonomy classifier for Rensume, a recruiting platform that helps recruiters understand the strengths and competencies of candidates who've had non-linear careers.
 
@@ -126,7 +120,7 @@ Extract Knowledge Area / Discipline using SOC 2018 minor group names.
 - DO NOT collapse distinct types of work into a single category. Each meaningfully different domain must appear as its own entry. Treat overlap as separate dimensions, not a reason to consolidate.
 - DO NOT create additional catch-all categories — compliance, customer operations, and data analysis are separate.
 - Return between 3 and 6 knowledge areas — no more, no fewer.
-- CRITICAL MATH: The candidate has exactly ${totalYears} total professional years. Years across all knowledge areas MUST sum to exactly ${totalYears}.
+// Knowledge area months do NOT need to sum to total_months. A role can draw on multiple knowledge areas simultaneously.
 
 Use only these SOC 2018 minor group names:
 ${SOC_MINOR_GROUPS.join(', ')}
@@ -138,24 +132,33 @@ Use "Based on [company]: [synthesis]" only if no direct quote is available.
 Do NOT reuse the same quote across knowledge areas.
 
 Respond ONLY with valid JSON:
-{"knowledge_areas": [{"name": "", "years": 0, "evidence": ""}]}`
+{"knowledge_areas": [{"name": "", "months": 0, "evidence": ""}]}`
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Normalise years so they sum to totalYears.
- * Handles floating point drift from the AI.
+ * Convert months to display years (1 decimal place).
+ * e.g. 10 months → 0.8y, 18 months → 1.5y
  */
-function normalizeYears(items, totalYears) {
-  if (!items?.length || !totalYears) return items
-  const sum = items.reduce((s, i) => s + (Number(i.years) || 0), 0)
-  if (sum === 0) return items
+function monthsToYears(months) {
+  return Math.round((Number(months) / 12) * 10) / 10
+}
+
+/**
+ * Convert all months fields on an array of items to display years.
+ */
+function convertMonthsToYears(items) {
+  if (!items?.length) return items
   return items.map(i => ({
     ...i,
-    years: Math.round((Number(i.years) / sum) * totalYears * 10) / 10,
+    years: monthsToYears(i.months),
   }))
 }
+
+// normalizeYears is no longer used — months-based calculation eliminates
+// the need to force items to sum to a total. Kept here for reference.
+// function normalizeYears(items, totalYears) { ... }
 
 /**
  * Apply seniority band prefix to a function level name.
@@ -229,22 +232,24 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   // Call 1 — shared dimensions
   onProgress('Extracting your profile...')
   const shared = await callAPI(SHARED_SYSTEM, prompt)
-  const totalYears = Number(shared.total_years) || 0
+  const totalMonths = Number(shared.total_months) || 0
+  const totalYears = monthsToYears(totalMonths)
 
   // Call 2 — knowledge areas
   onProgress('Classifying knowledge areas...')
-  const kaResult = await callAPI(buildKnowledgeAreaSystem(totalYears), prompt)
+  const kaResult = await callAPI(buildKnowledgeAreaSystem(totalMonths), prompt)
 
-  // Normalise years
-  shared.industries    = normalizeYears(shared.industries,         totalYears)
-  shared.functions     = normalizeYears(shared.functions,          totalYears)
-  const knowledgeAreas = normalizeYears(kaResult.knowledge_areas,  totalYears)
+  // Convert months to display years
+  shared.industries    = convertMonthsToYears(shared.industries)
+  shared.functions     = convertMonthsToYears(shared.functions)
+  const knowledgeAreas = convertMonthsToYears(kaResult.knowledge_areas)
 
   // Return a profile shaped to match the `cards` table schema
   return {
     summary:        shared.summary        || '',
     strengths:      shared.strengths      || '',
     total_years:    totalYears,
+    total_months:   totalMonths,
     functions:      shared.functions      || [],
     knowledge_areas: knowledgeAreas       || [],
     industries:     shared.industries     || [],
