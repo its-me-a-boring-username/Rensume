@@ -1,8 +1,11 @@
 // src/lib/generatePdf.js
 // Rensume card PDF — jsPDF, A4, Bordeaux theme.
 // Two-column layout:
-//   Left  — Function (square tag / style B) + Knowledge Area (accent bar / style A)
-//   Right — Industry (neutral bar / style A) + Strengths + Tools + Credentials
+//   Left  — Function (square tag) + Knowledge Area (accent bar)
+//   Right — Industry (neutral bar) + Strengths + Tools + Credentials
+//
+// Page sync: left column drawn first (may span pages), then right column
+// resets to page 1 and uses existing pages before adding new ones.
 
 import { jsPDF } from 'jspdf'
 import { getSeniorityLabel } from './classifier'
@@ -15,30 +18,26 @@ const C = {
   logoText:     [144, 64,  96],
   summaryText:  [144, 154, 168],
   bodyBg:       [250, 248, 244],
-  sectionLabel: [80,  72,  64],   // darkened from [96,88,80]
+  sectionLabel: [80,  72,  64],
   divider:      [216, 208, 200],
-  years:        [120, 110, 96],   // darkened from [160,152,136]
-
+  years:        [120, 110, 96],
   tagFnBg:      [44,  48,  56],
   tagFnText:    [200, 112, 144],
   tagFnYears:   [200, 112, 144],
-
   barKa:        [144, 64,  96],
-  labelKa:      [120, 48,  72],   // darkened accent for readability
-
-  barInd:       [180, 172, 164],  // slightly darker neutral bar
-  labelInd:     [48,  40,  32],   // darkened from [64,56,48]
-
-  evidenceText: [80,  70,  60],   // significantly darkened from [128,116,104]
+  labelKa:      [120, 48,  72],
+  barInd:       [180, 172, 164],
+  labelInd:     [48,  40,  32],
+  evidenceText: [80,  70,  60],
   strengthsBg:  [245, 241, 235],
-  strengthsTxt: [56,  44,  32],   // darkened from [80,64,48]
+  strengthsTxt: [56,  44,  32],
   toolBg:       [237, 234, 230],
-  toolText:     [48,  40,  32],   // darkened
+  toolText:     [48,  40,  32],
   toolBdr:      [200, 192, 184],
-  credType:     [120, 104, 88],   // darkened from [160,144,128]
-  credName:     [20,  14,  10],   // near black
-  credSub:      [88,  72,  58],   // darkened from [112,96,80]
-  footerLeft:   [140, 130, 116],  // darkened
+  credType:     [120, 104, 88],
+  credName:     [20,  14,  10],
+  credSub:      [88,  72,  58],
+  footerLeft:   [140, 130, 116],
   footerRight:  [104, 40,  72],
 }
 
@@ -56,7 +55,7 @@ const FOOT_H  = 9
 const FOOT_Y  = PAGE_H - FOOT_H
 const FONT    = 'helvetica'
 
-// ─── Typography — bumped up across the board ──────────────────────────────────
+// ─── Typography ───────────────────────────────────────────────────────────────
 
 const T = {
   logo:      { style: 'bold',   pt: 8    },
@@ -86,6 +85,11 @@ function lh(pt, ratio = 1.5) {
   return pt * 0.3528 * ratio
 }
 
+function paintBodyBg(doc) {
+  doc.setFillColor(...C.bodyBg)
+  doc.rect(0, 0, PAGE_W, PAGE_H, 'F')
+}
+
 function drawFooter(doc) {
   doc.setDrawColor(...C.divider)
   doc.setLineWidth(0.3)
@@ -108,16 +112,31 @@ function parseEvidence(str) {
 }
 
 // ─── Column factory ───────────────────────────────────────────────────────────
+// startPage: which page this column begins on (left=1, right=1 after reset)
+// reusePages: if true, use doc.setPage() to navigate existing pages instead of
+//             always calling addPage(). Used by the right column so it fills
+//             pages the left column already created.
 
-function makeColumn(doc, colX) {
-  let y = 0
+function makeColumn(doc, colX, startPage, reusePages) {
+  let y    = 0
+  let page = startPage
+
+  function goToPage(p) {
+    page = p
+    doc.setPage(p)
+  }
 
   function checkPage(needed = 18) {
     if (y + needed > FOOT_Y - 4) {
       drawFooter(doc)
-      doc.addPage()
-      doc.setFillColor(...C.bodyBg)
-      doc.rect(0, 0, PAGE_W, PAGE_H, 'F')
+      const nextPage = page + 1
+      if (reusePages && nextPage <= doc.getNumberOfPages()) {
+        goToPage(nextPage)
+      } else {
+        doc.addPage()
+        page = doc.getNumberOfPages()
+        paintBodyBg(doc)
+      }
       y = MARGIN + 4
     }
   }
@@ -135,7 +154,7 @@ function makeColumn(doc, colX) {
 
   // Style B — full-width square tag (function levels)
   function tagRow(label, yearsVal, evidence) {
-    const TAG_H  = 9.5   // taller for larger font
+    const TAG_H  = 9.5
     const TAG_PX = 6
     const EV_LH  = lh(T.evidence.pt, 1.6)
 
@@ -149,31 +168,26 @@ function makeColumn(doc, colX) {
 
     checkPage(TAG_H + evBlockH + 8)
 
-    // Tag background
     doc.setFillColor(...C.tagFnBg)
     doc.rect(colX, y, COL_W, TAG_H, 'F')
 
-    // Label — left-aligned, no centering math needed
     sf(doc, T.tag.style, T.tag.pt)
     doc.setTextColor(...C.tagFnText)
     doc.text(label, colX + TAG_PX, y + TAG_H / 2 + lh(T.tag.pt, 0.38))
 
-    // Years — right-aligned
     sf(doc, T.tagYears.style, T.tagYears.pt)
     doc.setTextColor(...C.tagFnYears)
     doc.text(`${yearsVal}y`, colX + COL_W - TAG_PX, y + TAG_H / 2 + lh(T.tagYears.pt, 0.38), { align: 'right' })
 
-    y += TAG_H + 5.5   // ← increased gap: tag → evidence
+    y += TAG_H + 5.5
 
-    // Evidence
     if (evWrapped.length > 0) {
       sf(doc, T.evidence.style, T.evidence.pt)
       doc.setTextColor(...C.evidenceText)
       evWrapped.forEach(line => { doc.text(line, colX + 4, y); y += EV_LH })
       y += 3
     }
-
-    y += 5   // gap before next row
+    y += 5
   }
 
   // Style A — left accent bar (knowledge area + industry)
@@ -193,36 +207,33 @@ function makeColumn(doc, colX) {
 
     checkPage(ROW_H + evBlockH + 8)
 
-    // Bar
     doc.setFillColor(...barColor)
     doc.roundedRect(colX, y, BAR_W, ROW_H, BAR_R, BAR_R, 'F')
 
-    // Label
     sf(doc, T.barLabel.style, T.barLabel.pt)
     doc.setTextColor(...labelColor)
     doc.text(label, colX + BAR_W + 5, y + ROW_H / 2 + lh(T.barLabel.pt, 0.38))
 
-    // Years
     sf(doc, T.barYears.style, T.barYears.pt)
     doc.setTextColor(...C.years)
     doc.text(`${yearsVal}y`, colX + COL_W, y + ROW_H / 2 + lh(T.barYears.pt, 0.38), { align: 'right' })
 
-    y += ROW_H + 5.5   // ← increased gap: bar → evidence
+    y += ROW_H + 5.5
 
-    // Evidence
     if (evWrapped.length > 0) {
       sf(doc, T.evidence.style, T.evidence.pt)
       doc.setTextColor(...C.evidenceText)
       evWrapped.forEach(line => { doc.text(line, colX + BAR_W + 5, y); y += EV_LH })
       y += 3
     }
-
     y += 5
   }
 
   return {
-    setY:      v => { y = v },
+    setY:      v  => { y = v },
     getY:      () => y,
+    getPage:   () => page,
+    goToPage,
     section,
     tagRow,
     barRow,
@@ -245,11 +256,10 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     credentials     = [],
   } = profile
 
-  // Body background
-  doc.setFillColor(...C.bodyBg)
-  doc.rect(0, 0, PAGE_W, PAGE_H, 'F')
+  // ── Page 1 background ─────────────────────────────────────────────────────
+  paintBodyBg(doc)
 
-  // Header — measure summary first
+  // ── Header — measure summary first ────────────────────────────────────────
   sf(doc, T.summary.style, T.summary.pt)
   const sumLines = doc.splitTextToSize(summary, PAGE_W - MARGIN * 2 - 2)
   const SUM_LH   = lh(T.summary.pt, 1.5)
@@ -271,17 +281,15 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
   const sumY = PAD_T + LOGO_H + PAD_M + SUM_LH * 0.82
   sumLines.forEach((line, i) => doc.text(line, MARGIN, sumY + i * SUM_LH))
 
-  // Accent rule
   doc.setFillColor(...C.accent)
   doc.rect(0, HDR_H, PAGE_W, ACC_H, 'F')
 
   const BODY_Y = HDR_H + ACC_H + 10
-  const left   = makeColumn(doc, COL_L)
-  const right  = makeColumn(doc, COL_R)
-  left.setY(BODY_Y)
-  right.setY(BODY_Y)
 
-  // LEFT: Function
+  // ── LEFT column — drawn first, reusePages=false (creates pages as needed) ─
+  const left = makeColumn(doc, COL_L, 1, false)
+  left.setY(BODY_Y)
+
   if (functions.length) {
     left.section('Function')
     functions.forEach(fn =>
@@ -290,7 +298,6 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     left.setY(left.getY() + 2)
   }
 
-  // LEFT: Knowledge Area
   if (knowledge_areas.length) {
     left.section('Knowledge Area')
     knowledge_areas.forEach(ka =>
@@ -298,7 +305,11 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     )
   }
 
-  // RIGHT: Industry
+  // ── RIGHT column — reset to page 1, reuse pages left column created ───────
+  const right = makeColumn(doc, COL_R, 1, true)
+  doc.setPage(1)         // jump back to page 1 before drawing right column
+  right.setY(BODY_Y)
+
   if (industries.length) {
     right.section('Industry')
     industries.forEach(ind =>
@@ -307,7 +318,6 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     right.setY(right.getY() + 2)
   }
 
-  // RIGHT: Strengths
   if (strengths) {
     right.checkPage(24)
     let ry = right.getY()
@@ -336,13 +346,10 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     right.setY(ry + boxH + 7)
   }
 
-  // RIGHT: Tooling & Methods
-  // Uses right.getY() / right.setY() exclusively — no drifting local ry
   if (tools.length) {
     right.checkPage(24)
-
-    // Section heading
     let ry = right.getY()
+
     sf(doc, T.section.style, T.section.pt)
     doc.setTextColor(...C.sectionLabel)
     doc.text('TOOLING & METHODS', COL_R, ry)
@@ -359,15 +366,12 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     tools.forEach(tool => {
       sf(doc, T.tool.style, T.tool.pt)
       const tw = doc.getTextWidth(tool) + CHIP_PX * 2
-
       if (tx + tw > COL_R + COL_W) {
-        // Wrap to next chip row — sync cursor first
         right.setY(right.getY() + CHIP_H + CHIP_GAP)
         right.checkPage(CHIP_H + 4)
         tx = COL_R
       }
-
-      ry = right.getY()   // always read fresh from column
+      ry = right.getY()
       doc.setFillColor(...C.toolBg)
       doc.rect(tx, ry, tw, CHIP_H, 'F')
       doc.setDrawColor(...C.toolBdr)
@@ -376,15 +380,11 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       doc.setTextColor(...C.toolText)
       sf(doc, T.tool.style, T.tool.pt)
       doc.text(tool, tx + tw / 2, ry + CHIP_H / 2 + lh(T.tool.pt, 0.38), { align: 'center' })
-
       tx += tw + CHIP_GAP
     })
-
-    // Advance past the last chip row
     right.setY(right.getY() + CHIP_H + 7)
   }
 
-  // RIGHT: Education & Credentials
   if (credentials.length) {
     right.checkPage(22)
     let ry = right.getY()
@@ -406,19 +406,16 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       const name      = cred.name || ''
       const sub       = [cred.institution, cred.year].filter(Boolean).join(' · ')
 
-      // Type badge
       sf(doc, T.credType.style, T.credType.pt)
       doc.setTextColor(...C.credType)
       doc.text(typeLabel, COL_R, ry)
       ry += lh(T.credType.pt, 1.7)
 
-      // Credential name
       sf(doc, T.credName.style, T.credName.pt)
       doc.setTextColor(...C.credName)
       const nameLines = doc.splitTextToSize(name, COL_W)
       nameLines.forEach(nl => { doc.text(nl, COL_R, ry); ry += lh(T.credName.pt, 1.4) })
 
-      // Institution · year
       if (sub) {
         sf(doc, T.credSub.style, T.credSub.pt)
         doc.setTextColor(...C.credSub)
@@ -431,7 +428,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     })
   }
 
-  // Footer on every page
+  // ── Footer on every page ───────────────────────────────────────────────────
   const total = doc.getNumberOfPages()
   for (let p = 1; p <= total; p++) {
     doc.setPage(p)
