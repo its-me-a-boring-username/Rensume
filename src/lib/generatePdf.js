@@ -1,16 +1,12 @@
 // src/lib/generatePdf.js
 // Rensume card PDF — jsPDF, A4, Bordeaux theme.
 // Font: IBM Plex Sans (embedded via ibmPlexFonts.js)
-// Two-column layout:
-//   Left  — Function Levels (bar + evidence) + Knowledge Areas (bar + evidence)
-//   Right — Industries (bar + evidence) + Tools + Credentials
-// Strengths: full-width band between header and columns
 
 import { jsPDF } from 'jspdf'
 import { registerIBMPlexSans } from './ibmPlexFonts'
 import { getSeniorityLabel } from './classifier'
 
-// ─── Colors (Bordeaux) ───────────────────────────────────────────────────────
+// ─── Colors ──────────────────────────────────────────────────────────────────
 
 const C = {
   headerBg:     [44,  48,  56],
@@ -38,17 +34,17 @@ const C = {
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
-const PAGE_W  = 210
-const PAGE_H  = 297
-const MARGIN  = 14
-const GUTTER  = 7
-const COL_W   = (PAGE_W - MARGIN * 2 - GUTTER) / 2
-const COL_L   = MARGIN
-const COL_R   = MARGIN + COL_W + GUTTER
-const ACC_H   = 2
-const FOOT_H  = 9
-const FOOT_Y  = PAGE_H - FOOT_H
-const IBM     = 'IBMPlexSans'
+const PAGE_W = 210
+const PAGE_H = 297
+const MARGIN = 14
+const GUTTER = 7
+const COL_W  = (PAGE_W - MARGIN * 2 - GUTTER) / 2
+const COL_L  = MARGIN
+const COL_R  = MARGIN + COL_W + GUTTER
+const ACC_H  = 2
+const FOOT_H = 9
+const FOOT_Y = PAGE_H - FOOT_H
+const IBM    = 'IBMPlexSans'
 
 // ─── Spacing ─────────────────────────────────────────────────────────────────
 
@@ -106,7 +102,8 @@ function parseEvidence(str) {
 // ─── Column factory ──────────────────────────────────────────────────────────
 
 function makeColumn(doc, colX, startPage, reusePages) {
-  let y = 0, page = startPage
+  let y = 0
+  let page = startPage
 
   function goToPage(p) { page = p; doc.setPage(p) }
 
@@ -119,7 +116,7 @@ function makeColumn(doc, colX, startPage, reusePages) {
       } else {
         doc.addPage()
         page = doc.getNumberOfPages()
-        try { paintBodyBg(doc)
+        paintBodyBg(doc)
       }
       y = MARGIN + 4
     }
@@ -137,7 +134,8 @@ function makeColumn(doc, colX, startPage, reusePages) {
   }
 
   function barRow(label, yearsVal, barColor, labelColor, evidence) {
-    const BAR_W = 3.5, BAR_R = 1
+    const BAR_W = 3.5
+    const BAR_R = 1
     const ROW_H = SP.barH
     const EV_LH = SP.evidenceLH
 
@@ -153,16 +151,13 @@ function makeColumn(doc, colX, startPage, reusePages) {
 
     checkPage(ROW_H + evBlockH + SP.noEvidenceGap)
 
-    // Bar
     doc.setFillColor(...barColor)
     doc.roundedRect(colX, y, BAR_W, ROW_H, BAR_R, BAR_R, 'F')
 
-    // Label
     sf(doc, 'bold', 'normal', 10)
     doc.setTextColor(...labelColor)
     doc.text(label, colX + BAR_W + 5, y + ROW_H / 2 + lh(10, 0.38))
 
-    // Years
     sf(doc, 'bold', 'normal', 10)
     doc.setTextColor(...labelColor)
     doc.text(`${yearsVal}y`, colX + COL_W, y + ROW_H / 2 + lh(10, 0.38), { align: 'right' })
@@ -180,207 +175,220 @@ function makeColumn(doc, colX, startPage, reusePages) {
     }
   }
 
-  return { setY: v => { y = v }, getY: () => y, getPage: () => page, goToPage, section, barRow, checkPage }
+  return {
+    setY:    v => { y = v },
+    getY:    () => y,
+    getPage: () => page,
+    goToPage,
+    section,
+    barRow,
+    checkPage,
+  }
 }
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 
 export function downloadCardPdf(profile, themeName = 'bordeaux') {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-
-  // Register IBM Plex Sans
   try {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+
     registerIBMPlexSans(doc)
-  } catch (e) {
-    alert('Font registration failed: ' + e.message)
-    console.error(e)
-    return
-  }
 
-  const {
-    summary         = '',
-    strengths       = '',
-    functions       = [],
-    knowledge_areas = [],
-    industries      = [],
-    tools           = [],
-    credentials     = [],
-  } = profile
+    const {
+      summary         = '',
+      strengths       = '',
+      functions       = [],
+      knowledge_areas = [],
+      industries      = [],
+      tools           = [],
+      credentials     = [],
+    } = profile
 
-  paintBodyBg(doc)
+    // ── Page background ─────────────────────────────────────────────────────
+    paintBodyBg(doc)
 
-  // ── Header ───────────────────────────────────────────────────────────────
-  sf(doc, 'bold', 'normal', 11)
-  const sumLines = doc.splitTextToSize(summary, PAGE_W - MARGIN * 2 - 2)
-  const SUM_LH   = lh(11, 1.45)
-  const PAD_T = 7, PAD_M = 5, PAD_B = 7
-  const LOGO_H = lh(7, 1)
-  const HDR_H = PAD_T + LOGO_H + PAD_M + sumLines.length * SUM_LH + PAD_B
+    // ── Header ───────────────────────────────────────────────────────────────
+    sf(doc, 'bold', 'normal', 11)
+    const sumLines = doc.splitTextToSize(summary, PAGE_W - MARGIN * 2 - 2)
+    const SUM_LH   = lh(11, 1.45)
+    const PAD_T    = 7
+    const PAD_M    = 5
+    const PAD_B    = 7
+    const LOGO_H   = lh(7, 1)
+    const HDR_H    = PAD_T + LOGO_H + PAD_M + sumLines.length * SUM_LH + PAD_B
 
-  doc.setFillColor(...C.headerBg)
-  doc.rect(0, 0, PAGE_W, HDR_H, 'F')
-
-  sf(doc, 'bold', 'normal', 7)
-  doc.setTextColor(...C.logoText)
-  doc.text('RENSUME · TAXONOMY PROFILE', MARGIN, PAD_T + LOGO_H)
-
-  sf(doc, 'bold', 'normal', 11)
-  doc.setTextColor(...C.summaryText)
-  const sumY = PAD_T + LOGO_H + PAD_M + SUM_LH * 0.82
-  sumLines.forEach((line, i) => doc.text(line, MARGIN, sumY + i * SUM_LH))
-
-  // ── Strengths — full-width band ──────────────────────────────────────────
-  let strengthsBandH = 0
-  if (strengths) {
-    sf(doc, 'normal', 'normal', 9)
-    const strLines = doc.splitTextToSize(strengths, PAGE_W - MARGIN * 2 - 10)
-    const STR_LH   = lh(9, 1.55)
-    const BOX_PY   = 5.5
-    strengthsBandH = strLines.length * STR_LH + BOX_PY * 2
-
-    doc.setFillColor(...C.strengthsBg)
-    doc.rect(0, HDR_H, PAGE_W, strengthsBandH, 'F')
-    doc.setDrawColor(...C.divider)
-    doc.setLineWidth(0.25)
-    doc.line(0, HDR_H + strengthsBandH, PAGE_W, HDR_H + strengthsBandH)
-
-    sf(doc, 'normal', 'normal', 9)
-    doc.setTextColor(...C.strengthsTxt)
-    strLines.forEach((line, i) =>
-      doc.text(line, MARGIN + 5, HDR_H + BOX_PY + STR_LH * 0.82 + i * STR_LH)
-    )
-  }
-
-  // ── Accent rule ──────────────────────────────────────────────────────────
-  const accentY = HDR_H + strengthsBandH
-  doc.setFillColor(...C.accent)
-  doc.rect(0, accentY, PAGE_W, ACC_H, 'F')
-
-  const BODY_Y = accentY + ACC_H + 10
-
-  // ── Columns ──────────────────────────────────────────────────────────────
-  const left  = makeColumn(doc, COL_L, 1, false)
-  const right = makeColumn(doc, COL_R, 1, true)
-  left.setY(BODY_Y)
-
-  // LEFT: Function Levels
-  if (functions.length) {
-    left.section('Function Levels')
-    functions.forEach(fn =>
-      left.barRow(getSeniorityLabel(fn.name, fn.years), fn.years, C.barFn, C.labelFn, fn.evidence)
-    )
-    left.setY(left.getY() + SP.sectionGap)
-  }
-
-  // LEFT: Knowledge Areas
-  if (knowledge_areas.length) {
-    left.section('Knowledge Areas')
-    knowledge_areas.forEach(ka =>
-      left.barRow(ka.name, ka.years, C.barKa, C.labelKa, ka.evidence)
-    )
-  }
-
-  // RIGHT: Industries
-  doc.setPage(1)
-  right.setY(BODY_Y)
-
-  if (industries.length) {
-    right.section('Industries')
-    industries.forEach(ind =>
-      right.barRow(ind.name, ind.years, C.barInd, C.labelInd, ind.evidence)
-    )
-    right.setY(right.getY() + SP.sectionGap)
-  }
-
-  // RIGHT: Tools
-  if (tools.length) {
-    right.checkPage(24)
-    let ry = right.getY()
+    doc.setFillColor(...C.headerBg)
+    doc.rect(0, 0, PAGE_W, HDR_H, 'F')
 
     sf(doc, 'bold', 'normal', 7)
-    doc.setTextColor(...C.sectionLabel)
-    doc.text('TOOLING & METHODS', COL_R, ry)
-    doc.setDrawColor(...C.divider)
-    doc.setLineWidth(0.3)
-    doc.line(COL_R, ry + 3, COL_R + COL_W, ry + 3)
-    right.setY(ry + SP.sectionToFirst)
+    doc.setTextColor(...C.logoText)
+    doc.text('RENSUME · TAXONOMY PROFILE', MARGIN, PAD_T + LOGO_H)
 
-    const CHIP_H = 6.5, CHIP_PX = 4.5, CHIP_GAP = 2.5
-    let tx = COL_R
+    sf(doc, 'bold', 'normal', 11)
+    doc.setTextColor(...C.summaryText)
+    const sumY = PAD_T + LOGO_H + PAD_M + SUM_LH * 0.82
+    sumLines.forEach((line, i) => doc.text(line, MARGIN, sumY + i * SUM_LH))
 
-    tools.forEach(tool => {
-      sf(doc, 'bold', 'normal', 7.5)
-      const tw = doc.getTextWidth(tool) + CHIP_PX * 2
-      if (tx + tw > COL_R + COL_W) {
-        right.setY(right.getY() + CHIP_H + CHIP_GAP)
-        right.checkPage(CHIP_H + 4)
-        tx = COL_R
-      }
-      ry = right.getY()
-      doc.setFillColor(...C.toolBg)
-      doc.rect(tx, ry, tw, CHIP_H, 'F')
-      doc.setDrawColor(...C.toolBdr)
-      doc.setLineWidth(0.2)
-      doc.rect(tx, ry, tw, CHIP_H, 'S')
-      doc.setTextColor(...C.toolText)
-      sf(doc, 'bold', 'normal', 7.5)
-      doc.text(tool, tx + tw / 2, ry + CHIP_H / 2 + lh(7.5, 0.38), { align: 'center' })
-      tx += tw + CHIP_GAP
-    })
-    right.setY(right.getY() + CHIP_H + SP.sectionGap + 2)
-  }
+    // ── Strengths band ───────────────────────────────────────────────────────
+    let strengthsBandH = 0
+    if (strengths) {
+      sf(doc, 'normal', 'normal', 9)
+      const strLines = doc.splitTextToSize(strengths, PAGE_W - MARGIN * 2 - 10)
+      const STR_LH   = lh(9, 1.55)
+      const BOX_PY   = 5.5
+      strengthsBandH = strLines.length * STR_LH + BOX_PY * 2
 
-  // RIGHT: Credentials
-  if (credentials.length) {
-    right.checkPage(22)
-    let ry = right.getY()
+      doc.setFillColor(...C.strengthsBg)
+      doc.rect(0, HDR_H, PAGE_W, strengthsBandH, 'F')
+      doc.setDrawColor(...C.divider)
+      doc.setLineWidth(0.25)
+      doc.line(0, HDR_H + strengthsBandH, PAGE_W, HDR_H + strengthsBandH)
 
-    sf(doc, 'bold', 'normal', 7)
-    doc.setTextColor(...C.sectionLabel)
-    doc.text('EDUCATION & CREDENTIALS', COL_R, ry)
-    doc.setDrawColor(...C.divider)
-    doc.setLineWidth(0.3)
-    doc.line(COL_R, ry + 3, COL_R + COL_W, ry + 3)
-    ry += SP.sectionToFirst
-    right.setY(ry)
+      sf(doc, 'normal', 'normal', 9)
+      doc.setTextColor(...C.strengthsTxt)
+      strLines.forEach((line, i) =>
+        doc.text(line, MARGIN + 5, HDR_H + BOX_PY + STR_LH * 0.82 + i * STR_LH)
+      )
+    }
 
-    credentials.forEach(cred => {
-      right.checkPage(16)
-      ry = right.getY()
+    // ── Accent rule ──────────────────────────────────────────────────────────
+    const accentY = HDR_H + strengthsBandH
+    doc.setFillColor(...C.accent)
+    doc.rect(0, accentY, PAGE_W, ACC_H, 'F')
 
-      const typeLabel = (cred.type || '').toUpperCase()
-      const sub = [cred.institution, cred.year].filter(Boolean).join(' · ')
+    const BODY_Y = accentY + ACC_H + 10
 
-      sf(doc, 'bold', 'normal', 6.5)
-      doc.setTextColor(...C.credType)
-      doc.text(typeLabel, COL_R, ry)
-      ry += lh(6.5, 1.7)
+    // ── Columns ──────────────────────────────────────────────────────────────
+    const left  = makeColumn(doc, COL_L, 1, false)
+    const right = makeColumn(doc, COL_R, 1, true)
+    left.setY(BODY_Y)
 
-      sf(doc, 'bold', 'normal', 9.5)
-      doc.setTextColor(...C.credName)
-      doc.splitTextToSize(cred.name || '', COL_W).forEach(nl => {
-        doc.text(nl, COL_R, ry); ry += lh(9.5, 1.4)
+    // LEFT: Function Levels
+    if (functions.length) {
+      left.section('Function Levels')
+      functions.forEach(fn =>
+        left.barRow(getSeniorityLabel(fn.name, fn.years), fn.years, C.barFn, C.labelFn, fn.evidence)
+      )
+      left.setY(left.getY() + SP.sectionGap)
+    }
+
+    // LEFT: Knowledge Areas
+    if (knowledge_areas.length) {
+      left.section('Knowledge Areas')
+      knowledge_areas.forEach(ka =>
+        left.barRow(ka.name, ka.years, C.barKa, C.labelKa, ka.evidence)
+      )
+    }
+
+    // RIGHT: Industries
+    doc.setPage(1)
+    right.setY(BODY_Y)
+
+    if (industries.length) {
+      right.section('Industries')
+      industries.forEach(ind =>
+        right.barRow(ind.name, ind.years, C.barInd, C.labelInd, ind.evidence)
+      )
+      right.setY(right.getY() + SP.sectionGap)
+    }
+
+    // RIGHT: Tools
+    if (tools.length) {
+      right.checkPage(24)
+      let ry = right.getY()
+
+      sf(doc, 'bold', 'normal', 7)
+      doc.setTextColor(...C.sectionLabel)
+      doc.text('TOOLING & METHODS', COL_R, ry)
+      doc.setDrawColor(...C.divider)
+      doc.setLineWidth(0.3)
+      doc.line(COL_R, ry + 3, COL_R + COL_W, ry + 3)
+      right.setY(ry + SP.sectionToFirst)
+
+      const CHIP_H   = 6.5
+      const CHIP_PX  = 4.5
+      const CHIP_GAP = 2.5
+      let tx = COL_R
+
+      tools.forEach(tool => {
+        sf(doc, 'bold', 'normal', 7.5)
+        const tw = doc.getTextWidth(tool) + CHIP_PX * 2
+        if (tx + tw > COL_R + COL_W) {
+          right.setY(right.getY() + CHIP_H + CHIP_GAP)
+          right.checkPage(CHIP_H + 4)
+          tx = COL_R
+        }
+        ry = right.getY()
+        doc.setFillColor(...C.toolBg)
+        doc.rect(tx, ry, tw, CHIP_H, 'F')
+        doc.setDrawColor(...C.toolBdr)
+        doc.setLineWidth(0.2)
+        doc.rect(tx, ry, tw, CHIP_H, 'S')
+        doc.setTextColor(...C.toolText)
+        sf(doc, 'bold', 'normal', 7.5)
+        doc.text(tool, tx + tw / 2, ry + CHIP_H / 2 + lh(7.5, 0.38), { align: 'center' })
+        tx += tw + CHIP_GAP
       })
+      right.setY(right.getY() + CHIP_H + SP.sectionGap + 2)
+    }
 
-      if (sub) {
-        sf(doc, 'normal', 'normal', 8.5)
-        doc.setTextColor(...C.credSub)
-        doc.splitTextToSize(sub, COL_W - 4).forEach(sl => {
-          doc.text(sl, COL_R + 4, ry); ry += lh(8.5, 1.4)
-        })
-      }
+    // RIGHT: Credentials
+    if (credentials.length) {
+      right.checkPage(22)
+      let ry = right.getY()
 
-      ry += 5
+      sf(doc, 'bold', 'normal', 7)
+      doc.setTextColor(...C.sectionLabel)
+      doc.text('EDUCATION & CREDENTIALS', COL_R, ry)
+      doc.setDrawColor(...C.divider)
+      doc.setLineWidth(0.3)
+      doc.line(COL_R, ry + 3, COL_R + COL_W, ry + 3)
+      ry += SP.sectionToFirst
       right.setY(ry)
-    })
-  }
 
-  // Footer on every page
-  const total = doc.getNumberOfPages()
-  for (let p = 1; p <= total; p++) { doc.setPage(p); drawFooter(doc) }
+      credentials.forEach(cred => {
+        right.checkPage(16)
+        ry = right.getY()
+
+        const typeLabel = (cred.type || '').toUpperCase()
+        const sub = [cred.institution, cred.year].filter(Boolean).join(' · ')
+
+        sf(doc, 'bold', 'normal', 6.5)
+        doc.setTextColor(...C.credType)
+        doc.text(typeLabel, COL_R, ry)
+        ry += lh(6.5, 1.7)
+
+        sf(doc, 'bold', 'normal', 9.5)
+        doc.setTextColor(...C.credName)
+        doc.splitTextToSize(cred.name || '', COL_W).forEach(nl => {
+          doc.text(nl, COL_R, ry)
+          ry += lh(9.5, 1.4)
+        })
+
+        if (sub) {
+          sf(doc, 'normal', 'normal', 8.5)
+          doc.setTextColor(...C.credSub)
+          doc.splitTextToSize(sub, COL_W - 4).forEach(sl => {
+            doc.text(sl, COL_R + 4, ry)
+            ry += lh(8.5, 1.4)
+          })
+        }
+
+        ry += 5
+        right.setY(ry)
+      })
+    }
+
+    // ── Footer on every page ─────────────────────────────────────────────────
+    const total = doc.getNumberOfPages()
+    for (let p = 1; p <= total; p++) {
+      doc.setPage(p)
+      drawFooter(doc)
+    }
 
     doc.save(`rensume-card-${themeName}-${Date.now()}.pdf`)
-  } catch(e) {
+
+  } catch (e) {
     alert('PDF error: ' + e.message)
     console.error('PDF generation error:', e)
   }
