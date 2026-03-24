@@ -67,7 +67,11 @@ const SP = {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function sf(doc, weight, style, pt) {
-  doc.setFont(IBM, weight, style)
+  const combined = weight === 'bold' && style === 'italic' ? 'bolditalic'
+    : weight === 'bold' ? 'bold'
+    : style === 'italic' ? 'italic'
+    : 'normal'
+  doc.setFont(IBM, combined)
   doc.setFontSize(pt)
 }
 
