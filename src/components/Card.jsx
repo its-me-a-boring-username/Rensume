@@ -151,30 +151,19 @@ export const THEME_KEYS = Object.keys(THEMES)
 // ─── Bar row (label left, years right, evidence below) ────────────────────────
 
 function BarRow({ label, years, barColor, labelColor, yearsColor, evidence, showEvidence }) {
-  const [open, setOpen] = useState(false)
-  const hasEvidence = showEvidence && evidence
-
   return (
     <div style={{ marginBottom: 2 }}>
-      <div
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', cursor: hasEvidence ? 'pointer' : 'default' }}
-        onClick={() => hasEvidence && setOpen(o => !o)}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ width: 3, height: 13, borderRadius: 1, background: barColor, flexShrink: 0, display: 'inline-block' }} />
           <span style={{ fontFamily: F.label, fontWeight: 700, fontSize: 10, color: labelColor }}>
             {label}
           </span>
         </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontFamily: F.label, fontWeight: 700, fontSize: 10, color: yearsColor }}>{years}y</span>
-          {hasEvidence && (
-            <span style={{ fontSize: 8, color: labelColor, opacity: 0.7 }}>{open ? '▾' : '›'}</span>
-          )}
-        </span>
+        <span style={{ fontFamily: F.label, fontWeight: 700, fontSize: 10, color: yearsColor }}>{years}y</span>
       </div>
-      {open && evidence && (
-        <div style={{ fontFamily: F.body, fontSize: 9, lineHeight: 1.65, padding: '5px 0 6px 9px', color: '#706050' }}>
+      {showEvidence && evidence && (
+        <div style={{ fontFamily: F.body, fontSize: 9, lineHeight: 1.65, padding: '2px 0 6px 9px', color: '#706050' }}>
           {evidence}
         </div>
       )}
