@@ -1,10 +1,40 @@
 // src/components/Card.jsx
-// The Rensume taxonomy card. Used on the generate page, candidate portal,
-// public card page, and recruiter slide-out. Pass showEvidence to enable
-// expandable evidence rows (used on the public card page).
+// The Rensume taxonomy card.
+//
+// Font stack (locked):
+//   Headline (summary)  — Mohave Bold
+//   Section labels      — Archivo Bold
+//   Labels (fn/ka/ind)  — Mulish Bold
+//   Evidence            — Archivo Normal
+//   Strengths           — Archivo Normal
+//   Credentials name    — Mulish Bold
+//   Credentials sub     — Archivo Normal
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getSeniorityLabel } from '../lib/classifier'
+
+// ─── Google Fonts loader ──────────────────────────────────────────────────────
+
+function InjectFonts() {
+  useEffect(() => {
+    const id = 'rensume-fonts'
+    if (document.getElementById(id)) return
+    const link = document.createElement('link')
+    link.id   = id
+    link.rel  = 'stylesheet'
+    link.href = 'https://fonts.googleapis.com/css2?family=Mohave:wght@600;700&family=Archivo:ital,wght@0,400;0,600;0,700;1,400&family=Mulish:wght@600;700&display=swap'
+    document.head.appendChild(link)
+  }, [])
+  return null
+}
+
+// ─── Font constants ───────────────────────────────────────────────────────────
+
+const F = {
+  headline:  "'Mohave', Arial, sans-serif",
+  label:     "'Mulish', Arial, sans-serif",
+  body:      "'Archivo', Arial, sans-serif",
+}
 
 // ─── Theme definitions ────────────────────────────────────────────────────────
 
@@ -19,13 +49,16 @@ export const THEMES = {
     summary: { color: '#909aa8' },
     body: { background: '#faf8f4' },
     section: { color: '#605850', borderBottom: '0.5px solid #d8d0c8' },
-    pillFn: { background: '#2c3038', color: '#c87090' },
-    pillKa: { background: '#904060', color: '#1a0810' },
-    pillInd: { background: '#edeae6', color: '#403830', border: '0.5px solid #c8c0b8' },
+    barFn:  { background: '#2c3038' }, labelFn:  { color: '#2c3038' },
+    barKa:  { background: '#904060' }, labelKa:  { color: '#904060' },
+    barInd: { background: '#c8c0b8' }, labelInd: { color: '#403830' },
     years: { color: '#a09888' },
+    evidenceText: { color: '#706050' },
+    strengthsBg: { background: '#f5f1eb', borderBottom: '0.5px solid #d8d0c4' },
+    strengthsText: { color: '#504030' },
     footer: { background: '#faf8f4', borderTop: '0.5px solid #d8d0c8' },
     footerLeft: { color: '#b0a898' },
-    footerRight: { color: '#682848', fontWeight: 700, letterSpacing: '.1em' },
+    footerRight: { color: '#682848' },
   },
   ember: {
     label: 'Ember',
@@ -37,13 +70,16 @@ export const THEMES = {
     summary: { color: '#909aa8' },
     body: { background: '#faf8f4' },
     section: { color: '#605850', borderBottom: '0.5px solid #d8d0c8' },
-    pillFn: { background: '#2c3038', color: '#d07070' },
-    pillKa: { background: '#a84040', color: '#1a0808' },
-    pillInd: { background: '#edeae6', color: '#403830', border: '0.5px solid #c8c0b8' },
+    barFn:  { background: '#2c3038' }, labelFn:  { color: '#2c3038' },
+    barKa:  { background: '#a84040' }, labelKa:  { color: '#a84040' },
+    barInd: { background: '#c8c0b8' }, labelInd: { color: '#403830' },
     years: { color: '#a09888' },
+    evidenceText: { color: '#706050' },
+    strengthsBg: { background: '#f5f1eb', borderBottom: '0.5px solid #d8d0c4' },
+    strengthsText: { color: '#504030' },
     footer: { background: '#faf8f4', borderTop: '0.5px solid #d8d0c8' },
     footerLeft: { color: '#b0a898' },
-    footerRight: { color: '#802828', fontWeight: 700, letterSpacing: '.1em' },
+    footerRight: { color: '#802828' },
   },
   oxford: {
     label: 'Oxford',
@@ -55,13 +91,16 @@ export const THEMES = {
     summary: { color: '#8090a8' },
     body: { background: '#f7f9fb' },
     section: { color: '#485868', borderBottom: '0.5px solid #c8d0d8' },
-    pillFn: { background: '#182030', color: '#80b0e0' },
-    pillKa: { background: '#3a6aaa', color: '#080c18' },
-    pillInd: { background: '#e8eaed', color: '#303848', border: '0.5px solid #b8c0c8' },
+    barFn:  { background: '#182030' }, labelFn:  { color: '#182030' },
+    barKa:  { background: '#3a6aaa' }, labelKa:  { color: '#3a6aaa' },
+    barInd: { background: '#b8c0c8' }, labelInd: { color: '#303848' },
     years: { color: '#8898a8' },
+    evidenceText: { color: '#485868' },
+    strengthsBg: { background: '#edf1f5', borderBottom: '0.5px solid #c8d0d8' },
+    strengthsText: { color: '#283848' },
     footer: { background: '#f7f9fb', borderTop: '0.5px solid #c8d0d8' },
     footerLeft: { color: '#90a0b0' },
-    footerRight: { color: '#284880', fontWeight: 700, letterSpacing: '.1em' },
+    footerRight: { color: '#284880' },
   },
   gilt: {
     label: 'Gilt',
@@ -73,13 +112,16 @@ export const THEMES = {
     summary: { color: '#909090' },
     body: { background: '#faf8f4' },
     section: { color: '#706050', borderBottom: '0.5px solid #d8d0c4' },
-    pillFn: { background: '#111111', color: '#c8a96e' },
-    pillKa: { background: '#c8a96e', color: '#111111' },
-    pillInd: { background: '#eeece8', color: '#484038', border: '0.5px solid #ccc8c0' },
+    barFn:  { background: '#111111' }, labelFn:  { color: '#111111' },
+    barKa:  { background: '#c8a96e' }, labelKa:  { color: '#7a6030' },
+    barInd: { background: '#ccc8c0' }, labelInd: { color: '#484038' },
     years: { color: '#a09070' },
+    evidenceText: { color: '#706050' },
+    strengthsBg: { background: '#f5f0e8', borderBottom: '0.5px solid #d8d0c4' },
+    strengthsText: { color: '#504030' },
     footer: { background: '#faf8f4', borderTop: '0.5px solid #d8d0c4' },
     footerLeft: { color: '#b0a890' },
-    footerRight: { color: '#906830', fontWeight: 700, letterSpacing: '.1em' },
+    footerRight: { color: '#906830' },
   },
   sterling: {
     label: 'Sterling',
@@ -91,55 +133,48 @@ export const THEMES = {
     summary: { color: '#8090a0' },
     body: { background: '#f8f9fa' },
     section: { color: '#505860', borderBottom: '0.5px solid #c8ccd0' },
-    pillFn: { background: '#252a30', color: '#b0c0d0' },
-    pillKa: { background: '#8898a8', color: '#111111' },
-    pillInd: { background: '#eaecee', color: '#383c42', border: '0.5px solid #c0c4c8' },
+    barFn:  { background: '#252a30' }, labelFn:  { color: '#252a30' },
+    barKa:  { background: '#8898a8' }, labelKa:  { color: '#505860' },
+    barInd: { background: '#c0c4c8' }, labelInd: { color: '#383c42' },
     years: { color: '#8898a8' },
+    evidenceText: { color: '#505860' },
+    strengthsBg: { background: '#edeef0', borderBottom: '0.5px solid #c8ccd0' },
+    strengthsText: { color: '#383c42' },
     footer: { background: '#f8f9fa', borderTop: '0.5px solid #c8ccd0' },
     footerLeft: { color: '#9098a0' },
-    footerRight: { color: '#506070', fontWeight: 700, letterSpacing: '.1em' },
+    footerRight: { color: '#506070' },
   },
 }
 
 export const THEME_KEYS = Object.keys(THEMES)
 
-// ─── Expandable evidence row ──────────────────────────────────────────────────
+// ─── Bar row (label left, years right, evidence below) ────────────────────────
 
-function EvidenceRow({ pill, years, evidence, t, showEvidence }) {
+function BarRow({ label, years, barColor, labelColor, yearsColor, evidence, showEvidence }) {
   const [open, setOpen] = useState(false)
+  const hasEvidence = showEvidence && evidence
+
   return (
-    <div style={{ borderBottom: '0.5px solid #f0ece8' }}>
+    <div style={{ marginBottom: 2 }}>
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '5px 0',
-          cursor: showEvidence && evidence ? 'pointer' : 'default',
-        }}
-        onClick={() => showEvidence && evidence && setOpen(o => !o)}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', cursor: hasEvidence ? 'pointer' : 'default' }}
+        onClick={() => hasEvidence && setOpen(o => !o)}
       >
-        <span style={{ ...pill, padding: '3px 9px', borderRadius: 3, fontSize: 9, fontWeight: 700, display: 'inline-block' }}>
-          {t.label}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 3, height: 13, borderRadius: 1, background: barColor, flexShrink: 0, display: 'inline-block' }} />
+          <span style={{ fontFamily: F.label, fontWeight: 700, fontSize: 10, color: labelColor }}>
+            {label}
+          </span>
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ ...years, fontSize: 8.5 }}>{t.years}y</span>
-          {showEvidence && evidence && (
-            <span style={{ fontSize: 8, color: '#904060' }}>{open ? '▾' : '›'} Evidence</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontFamily: F.label, fontWeight: 700, fontSize: 10, color: yearsColor }}>{years}y</span>
+          {hasEvidence && (
+            <span style={{ fontSize: 8, color: labelColor, opacity: 0.7 }}>{open ? '▾' : '›'}</span>
           )}
-        </div>
+        </span>
       </div>
       {open && evidence && (
-        <div style={{
-          background: '#f8f5f0',
-          borderRadius: 4,
-          padding: '8px 10px',
-          marginBottom: 6,
-          fontSize: 9,
-          color: '#605040',
-          lineHeight: 1.65,
-          fontStyle: 'italic',
-        }}>
+        <div style={{ fontFamily: F.body, fontSize: 9, lineHeight: 1.65, padding: '5px 0 6px 9px', color: 'inherit' }}>
           {evidence}
         </div>
       )}
@@ -149,53 +184,55 @@ function EvidenceRow({ pill, years, evidence, t, showEvidence }) {
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
-/**
- * The Rensume taxonomy card.
- *
- * Props:
- *   profile     — classified profile object from classifier.js
- *   theme       — one of THEME_KEYS (default 'bordeaux')
- *   showEvidence — whether evidence rows are expandable (default false)
- *   style       — optional container style overrides
- */
 export default function Card({ profile, theme = 'bordeaux', showEvidence = false, style = {} }) {
   const t = THEMES[theme] || THEMES.bordeaux
-
   if (!profile) return null
 
   const { summary, functions = [], knowledge_areas = [], industries = [], strengths, tools = [], credentials = [] } = profile
 
   return (
-    <div style={{ borderRadius: 8, overflow: 'hidden', fontFamily: '-apple-system, Arial, sans-serif', ...t.card, ...style }}>
+    <div style={{ borderRadius: 8, overflow: 'hidden', fontFamily: F.body, ...t.card, ...style }}>
+      <InjectFonts />
 
       {/* Header */}
       <div style={{ ...t.header, padding: '14px 18px' }}>
-        <div style={{ ...t.logo, fontSize: 7, fontWeight: 700, letterSpacing: '.16em', marginBottom: 6 }}>
-          RENSUME · TAXONOMY PROFILE
+        <div style={{ ...t.logo, fontFamily: F.body, fontSize: 7, fontWeight: 700, letterSpacing: '.16em', marginBottom: 8, textTransform: 'uppercase' }}>
+          Rensume · Taxonomy Profile
         </div>
-        <div style={{ ...t.summary, fontSize: 10, lineHeight: 1.55 }}>
+        <div style={{ ...t.summary, fontFamily: F.headline, fontWeight: 700, fontSize: 13, lineHeight: 1.35 }}>
           {summary}
         </div>
       </div>
 
       {/* Accent rule */}
-      <div style={{ ...t.accent, height: 3 }} />
+      <div style={{ ...t.accent, height: 2 }} />
 
-      {/* Body */}
-      <div style={{ ...t.body, padding: '12px 18px' }}>
+      {/* Strengths — full width under header */}
+      {strengths && (
+        <div style={{ ...t.strengthsBg, padding: '9px 18px' }}>
+          <div style={{ ...t.strengthsText, fontFamily: F.body, fontSize: 9, lineHeight: 1.65 }}>
+            {strengths}
+          </div>
+        </div>
+      )}
 
-        {/* Function */}
+      {/* Body — two columns */}
+      <div style={{ ...t.body, padding: '12px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+
+        {/* LEFT: Function Levels */}
         {functions.length > 0 && (
           <div>
-            <div style={{ ...t.section, fontSize: 7, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
-              Function
+            <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
+              Function Levels
             </div>
             {functions.map((fn, i) => (
-              <EvidenceRow
+              <BarRow
                 key={i}
-                t={{ label: getSeniorityLabel(fn.name, fn.years), years: fn.years }}
-                pill={t.pillFn}
-                years={t.years}
+                label={getSeniorityLabel(fn.name, fn.years)}
+                years={fn.years}
+                barColor={t.barFn.background}
+                labelColor={t.labelFn.color}
+                yearsColor={t.labelFn.color}
                 evidence={fn.evidence}
                 showEvidence={showEvidence}
               />
@@ -203,93 +240,96 @@ export default function Card({ profile, theme = 'bordeaux', showEvidence = false
           </div>
         )}
 
-        {/* Knowledge area */}
-        {knowledge_areas.length > 0 && (
-          <div style={{ marginTop: 10 }}>
-            <div style={{ ...t.section, fontSize: 7, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
-              Knowledge area
-            </div>
-            {knowledge_areas.map((ka, i) => (
-              <EvidenceRow
-                key={i}
-                t={{ label: ka.name, years: ka.years }}
-                pill={t.pillKa}
-                years={t.years}
-                evidence={ka.evidence}
-                showEvidence={showEvidence}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Industry */}
+        {/* RIGHT: Industries */}
         {industries.length > 0 && (
-          <div style={{ marginTop: 10 }}>
-            <div style={{ ...t.section, fontSize: 7, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
-              Industry
+          <div>
+            <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
+              Industries
             </div>
             {industries.map((ind, i) => (
-              <EvidenceRow
+              <BarRow
                 key={i}
-                t={{ label: ind.name, years: ind.years }}
-                pill={t.pillInd}
-                years={t.years}
-                evidence={ind.evidence}
-                showEvidence={showEvidence}
+                label={ind.name}
+                years={ind.years}
+                barColor={t.barInd.background}
+                labelColor={t.labelInd.color}
+                yearsColor={t.labelInd.color}
+                evidence={null}
+                showEvidence={false}
               />
             ))}
           </div>
         )}
 
-        {/* Strengths */}
-        {strengths && (
-          <div style={{ marginTop: 12, background: '#f5f1eb', borderRadius: 4, padding: '10px 12px' }}>
-            <div style={{ ...t.section, fontSize: 7, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 6, paddingBottom: 3 }}>
-              Strengths
-            </div>
-            <div style={{ fontSize: 10, color: '#504030', lineHeight: 1.7 }}>{strengths}</div>
-          </div>
-        )}
-
-        {/* Tools */}
-        {tools.length > 0 && (
+        {/* LEFT continued: Knowledge Areas */}
+        {knowledge_areas.length > 0 && (
           <div style={{ marginTop: 10 }}>
-            <div style={{ ...t.section, fontSize: 7, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 6, paddingBottom: 3 }}>
-              Tooling &amp; methods
+            <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
+              Knowledge Areas
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {tools.map((tool, i) => (
-                <span key={i} style={{ background: '#edeae6', color: '#403830', border: '0.5px solid #c8c0b8', padding: '2px 7px', borderRadius: 3, fontSize: 8, fontWeight: 700 }}>
-                  {tool}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Credentials */}
-        {credentials.length > 0 && (
-          <div style={{ marginTop: 10 }}>
-            <div style={{ ...t.section, fontSize: 7, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 6, paddingBottom: 3 }}>
-              Education &amp; credentials
-            </div>
-            {credentials.map((c, i) => (
-              <div key={i} style={{ fontSize: 9.5, color: '#1a1410', marginBottom: 4 }}>
-                <span style={{ fontSize: 8, fontWeight: 700, color: '#a09080', textTransform: 'uppercase', letterSpacing: '.08em', marginRight: 6 }}>{c.type}</span>
-                <strong>{c.name}</strong>
-                {c.institution && <span style={{ color: '#706050' }}> · {c.institution}</span>}
-                {c.year && <span style={{ color: '#a09080' }}> · {c.year}</span>}
-              </div>
+            {knowledge_areas.map((ka, i) => (
+              <BarRow
+                key={i}
+                label={ka.name}
+                years={ka.years}
+                barColor={t.barKa.background}
+                labelColor={t.labelKa.color}
+                yearsColor={t.labelKa.color}
+                evidence={null}
+                showEvidence={false}
+              />
             ))}
           </div>
         )}
+
+        {/* RIGHT continued: Tools + Credentials */}
+        <div style={{ marginTop: 10 }}>
+
+          {tools.length > 0 && (
+            <div>
+              <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
+                Tooling &amp; Methods
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 10 }}>
+                {tools.map((tool, i) => (
+                  <span key={i} style={{ fontFamily: F.body, fontSize: 8, fontWeight: 700, padding: '2px 6px', borderRadius: 2, background: '#edeae6', color: '#403830', border: '0.5px solid #c8c0b8' }}>
+                    {tool}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {credentials.length > 0 && (
+            <div>
+              <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
+                Education &amp; Credentials
+              </div>
+              {credentials.map((c, i) => (
+                <div key={i} style={{ marginBottom: 7 }}>
+                  <div style={{ fontFamily: F.body, fontSize: 6.5, fontWeight: 700, color: t.years.color, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>
+                    {c.type}
+                  </div>
+                  <div style={{ fontFamily: F.label, fontWeight: 700, fontSize: 9.5, color: '#1a1410' }}>
+                    {c.name}
+                  </div>
+                  {(c.institution || c.year) && (
+                    <div style={{ fontFamily: F.body, fontSize: 8.5, color: t.evidenceText.color }}>
+                      {[c.institution, c.year].filter(Boolean).join(' · ')}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
       </div>
 
       {/* Footer */}
-      <div style={{ ...t.footer, padding: '8px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ ...t.footerLeft, fontSize: 7.5 }}>Candidate-owned · read-only for recruiters</span>
-        <span style={{ ...t.footerRight, fontSize: 7.5 }}>RENSUME</span>
+      <div style={{ ...t.footer, padding: '7px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ ...t.footerLeft, fontFamily: F.body, fontSize: 7 }}>Candidate-owned · read-only for recruiters</span>
+        <span style={{ ...t.footerRight, fontFamily: F.body, fontSize: 7, fontWeight: 700, letterSpacing: '.1em' }}>RENSUME</span>
       </div>
 
     </div>
