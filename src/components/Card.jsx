@@ -1,14 +1,14 @@
 // src/components/Card.jsx
 // The Rensume taxonomy card.
 //
-// Font stack (locked):
-//   Headline (summary)  — Mohave Bold
-//   Section labels      — Archivo Bold
-//   Labels (fn/ka/ind)  — Mulish Bold
-//   Evidence            — Archivo Normal
-//   Strengths           — Archivo Normal
-//   Credentials name    — Mulish Bold
-//   Credentials sub     — Archivo Normal
+// Font stack: IBM Plex Sans everywhere
+
+
+
+
+
+
+
 
 import { useState, useEffect } from 'react'
 import { getSeniorityLabel } from '../lib/classifier'
@@ -22,7 +22,7 @@ function InjectFonts() {
     const link = document.createElement('link')
     link.id   = id
     link.rel  = 'stylesheet'
-    link.href = 'https://fonts.googleapis.com/css2?family=Mohave:wght@600;700&family=Archivo:ital,wght@0,400;0,600;0,700;1,400&family=Mulish:wght@600;700&display=swap'
+    link.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,600;0,700;1,400;1,700'https://fonts.googleapis.com/css2?family=Mohave:wght@600;700&family=Archivo:ital,wght@0,400;0,600;0,700;1,400&family=Mulish:wght@600;700&display=swap'display=swap'
     document.head.appendChild(link)
   }, [])
   return null
@@ -31,9 +31,9 @@ function InjectFonts() {
 // ─── Font constants ───────────────────────────────────────────────────────────
 
 const F = {
-  headline:  "'Mohave', Arial, sans-serif",
-  label:     "'Mulish', Arial, sans-serif",
-  body:      "'Archivo', Arial, sans-serif",
+  headline:  "'IBM Plex Sans', Arial, sans-serif",
+  label:     "'IBM Plex Sans', Arial, sans-serif",
+  body:      "'IBM Plex Sans', Arial, sans-serif",
 }
 
 // ─── Theme definitions ────────────────────────────────────────────────────────
@@ -174,7 +174,7 @@ function BarRow({ label, years, barColor, labelColor, yearsColor, evidence, show
         </span>
       </div>
       {open && evidence && (
-        <div style={{ fontFamily: F.body, fontSize: 9, lineHeight: 1.65, padding: '5px 0 6px 9px', color: 'inherit' }}>
+        <div style={{ fontFamily: F.body, fontSize: 9, lineHeight: 1.65, padding: '5px 0 6px 9px', color: '#706050' }}>
           {evidence}
         </div>
       )}
@@ -254,8 +254,8 @@ export default function Card({ profile, theme = 'bordeaux', showEvidence = false
                 barColor={t.barInd.background}
                 labelColor={t.labelInd.color}
                 yearsColor={t.labelInd.color}
-                evidence={null}
-                showEvidence={false}
+                evidence={ind.evidence}
+                showEvidence={showEvidence}
               />
             ))}
           </div>
@@ -275,8 +275,8 @@ export default function Card({ profile, theme = 'bordeaux', showEvidence = false
                 barColor={t.barKa.background}
                 labelColor={t.labelKa.color}
                 yearsColor={t.labelKa.color}
-                evidence={null}
-                showEvidence={false}
+                evidence={ka.evidence}
+                showEvidence={showEvidence}
               />
             ))}
           </div>
