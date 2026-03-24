@@ -77,6 +77,8 @@ const T = {
 // ─── Spacing — single source of truth ────────────────────────────────────────
 // Consistent rhythm matching the Lyminal layout feel.
 
+function lhFn(pt, ratio) { return pt * 0.3528 * ratio }
+
 const SP = {
   barH:          lhFn(T.barLabel.pt, 1.9),  // bar row height
   barToEvidence: 3.5,   // gap: bar bottom → first evidence line
@@ -86,8 +88,6 @@ const SP = {
   sectionToFirst:9,     // section heading → first item
   sectionGap:    6,     // gap before a new section heading
 }
-
-function lhFn(pt, ratio) { return pt * 0.3528 * ratio }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -505,5 +505,4 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
   doc.save(`rensume-card-${themeName}-${Date.now()}.pdf`)
 }
 
-// Needed at module level for SP initialisation above
-function lhFn(pt, ratio) { return pt * 0.3528 * ratio }
+
