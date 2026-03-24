@@ -185,7 +185,13 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
 
   // Register IBM Plex Sans
-  registerIBMPlexSans(doc)
+  try {
+    registerIBMPlexSans(doc)
+  } catch (e) {
+    alert('Font registration failed: ' + e.message)
+    console.error(e)
+    return
+  }
 
   const {
     summary         = '',
@@ -369,5 +375,10 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
   const total = doc.getNumberOfPages()
   for (let p = 1; p <= total; p++) { doc.setPage(p); drawFooter(doc) }
 
-  doc.save(`rensume-card-${themeName}-${Date.now()}.pdf`)
+  try {
+    doc.save(`rensume-card-${themeName}-${Date.now()}.pdf`)
+  } catch(e) {
+    alert('PDF save failed: ' + e.message)
+    console.error(e)
+  }
 }
