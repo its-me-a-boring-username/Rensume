@@ -22,7 +22,7 @@ function InjectFonts() {
     const link = document.createElement('link')
     link.id   = id
     link.rel  = 'stylesheet'
-    link.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,600;0,700;1,400;1,700'https://fonts.googleapis.com/css2?family=Mohave:wght@600;700&family=Archivo:ital,wght@0,400;0,600;0,700;1,400&family=Mulish:wght@600;700&display=swap'display=swap'
+    link.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,600;0,700;1,400;1,700&display=swap'
     document.head.appendChild(link)
   }, [])
   return null
