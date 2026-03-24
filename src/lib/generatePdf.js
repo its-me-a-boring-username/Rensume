@@ -80,13 +80,13 @@ const T = {
 function lhFn(pt, ratio) { return pt * 0.3528 * ratio }
 
 const SP = {
-  barH:           lhFn(T.barLabel.pt, 1.9),
-  barToEvidence:  3.5,
-  evidenceLH:     lhFn(T.evidence.pt, 1.55),
-  evidenceToNext: 3.5,
-  noEvidenceGap:  4,
-  sectionToFirst: 9,
-  sectionGap:     6,
+  barH:           lhFn(T.barLabel.pt, 1.7),
+  barToEvidence:  2.5,
+  evidenceLH:     lhFn(T.evidence.pt, 1.45),
+  evidenceToNext: 2,
+  noEvidenceGap:  3,
+  sectionToFirst: 7,
+  sectionGap:     4,
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -237,7 +237,7 @@ function makeColumn(doc, colX, startPage, reusePages) {
     doc.text(label, colX + BAR_W + 5, y + ROW_H / 2 + lh(T.barLabel.pt, 0.38))
 
     sf(doc, T.barYears)
-    doc.setTextColor(...C.years)
+    doc.setTextColor(...labelColor)
     doc.text(`${yearsVal}y`, colX + COL_W, y + ROW_H / 2 + lh(T.barYears.pt, 0.38), { align: 'right' })
 
     y += ROW_H
@@ -329,8 +329,8 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
   const BODY_Y = accentY + ACC_H + 10
 
   // ── Dry run: one-page check for function evidence ─────────────────────────
-  const estimatedH  = estimateHeight(doc, profile, BODY_Y)
-  const showEvidence = estimatedH <= FOOT_Y
+  // Evidence always shown — no dry-run
+  const showEvidence = true
 
   // ── LEFT column ────────────────────────────────────────────────────────────
   const left = makeColumn(doc, COL_L, 1, false)
