@@ -119,7 +119,7 @@ function makeColumn(doc, colX, startPage, reusePages) {
       } else {
         doc.addPage()
         page = doc.getNumberOfPages()
-        paintBodyBg(doc)
+        try { paintBodyBg(doc)
       }
       y = MARGIN + 4
     }
@@ -379,10 +379,9 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
   const total = doc.getNumberOfPages()
   for (let p = 1; p <= total; p++) { doc.setPage(p); drawFooter(doc) }
 
-  try {
     doc.save(`rensume-card-${themeName}-${Date.now()}.pdf`)
   } catch(e) {
-    alert('PDF save failed: ' + e.message)
-    console.error(e)
+    alert('PDF error: ' + e.message)
+    console.error('PDF generation error:', e)
   }
 }
