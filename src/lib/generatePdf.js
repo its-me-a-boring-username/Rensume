@@ -53,12 +53,12 @@ function lhFn(pt, ratio) { return pt * 0.3528 * ratio }
 
 const SP = {
   barH:           lhFn(10, 1.5),   // compact bar height
-  barToEvidence:  2,               // tight gap bar -> evidence
-  evidenceLH:     lhFn(9, 1.45),  // compact line height
-  evidenceToNext: 2,               // tight gap after evidence
-  noEvidenceGap:  3,               // gap between items without evidence
-  sectionToFirst: 6,
-  sectionGap:     4,
+  barToEvidence:  1.5,             // tight gap bar -> evidence
+  evidenceLH:     lhFn(9, 1.4),   // compact line height
+  evidenceToNext: 1.5,             // tight gap after evidence
+  noEvidenceGap:  2.5,             // gap between items without evidence
+  sectionToFirst: 5,
+  sectionGap:     3,
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -262,7 +262,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
       const BOX_PY  = 4
       const TEXT_X  = MARGIN + 5
       const TEXT_W  = PAGE_W - MARGIN * 2 - 10
-      const STR_Y   = HDR_H + ACC_H + 8
+      const STR_Y   = HDR_H + ACC_H + 6
 
       sf(doc, 'normal', 'normal', 9)
       const strLines = doc.splitTextToSize(strengths, TEXT_W)
@@ -289,7 +289,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
       strLines.forEach((line, i) => doc.text(line, TEXT_X, sy + i * STR_LH))
     }
 
-    const BODY_Y = HDR_H + ACC_H + (strengthsBandH > 0 ? 8 + strengthsBandH + 8 : 0) + 7
+    const BODY_Y = HDR_H + ACC_H + (strengthsBandH > 0 ? 6 + strengthsBandH + 4 : 0) + 7
 
     // ── Columns ──────────────────────────────────────────────────────────────
     // Draw order:
