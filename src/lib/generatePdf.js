@@ -124,13 +124,13 @@ function makeColumn(doc, colX, startPage, reusePages) {
 
   function section(label) {
     checkPage(20)
-    sf(doc, 'bold', 'normal', 7)
+    sf(doc, 'bold', 'normal', 9)
     doc.setTextColor(...C.sectionLabel)
     doc.text(label.toUpperCase(), colX, y)
     doc.setDrawColor(...C.divider)
     doc.setLineWidth(0.3)
-    doc.line(colX, y + 3, colX + COL_W, y + 3)
-    y += SP.sectionToFirst
+    doc.line(colX, y + 4, colX + COL_W, y + 4)
+    y += SP.sectionToFirst + 2
   }
 
   function barRow(label, yearsVal, barColor, labelColor, evidence) {
@@ -232,11 +232,26 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     // ── Strengths band ───────────────────────────────────────────────────────
     let strengthsBandH = 0
     if (strengths) {
-      sf(doc, 'normal', 'normal', 9)
-      const strLines = doc.splitTextToSize(strengths, PAGE_W - MARGIN * 2 - 10)
+      const LABEL_H  = lh(7, 1.8)   // height of "STRENGTHS" label
       const STR_LH   = lh(9, 1.55)
       const BOX_PY   = 4
-      strengthsBandH = strLines.length * STR_LH + BOX_PY * 2
+      const BULLET_X = MARGIN + 5
+      const TEXT_X   = MARGIN + 10
+      const TEXT_W   = PAGE_W - MARGIN * 2 - 15
+
+      // Split strengths into sentences for bullets
+      const sentences = strengths
+        .split(/(?<=[.!?])\s+/)
+        .map(s => s.trim())
+        .filter(Boolean)
+
+      // Pre-wrap each sentence
+      sf(doc, 'normal', 'normal', 9)
+      const wrappedSentences = sentences.map(s => doc.splitTextToSize(s, TEXT_W))
+      const totalLines = wrappedSentences.reduce((t, l) => t + l.length, 0)
+      const totalBulletH = wrappedSentences.reduce((t, lines) => t + lines.length * STR_LH + 2, 0)
+
+      strengthsBandH = LABEL_H + BOX_PY + totalBulletH + BOX_PY
 
       doc.setFillColor(...C.strengthsBg)
       doc.rect(0, HDR_H, PAGE_W, strengthsBandH, 'F')
@@ -244,11 +259,28 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       doc.setLineWidth(0.25)
       doc.line(0, HDR_H + strengthsBandH, PAGE_W, HDR_H + strengthsBandH)
 
+      // Label
+      sf(doc, 'bold', 'normal', 7)
+      doc.setTextColor(...C.sectionLabel)
+      doc.text('STRENGTHS', MARGIN + 5, HDR_H + BOX_PY + lh(7, 0.8))
+      doc.setDrawColor(...C.divider)
+      doc.setLineWidth(0.25)
+      doc.line(MARGIN + 5, HDR_H + BOX_PY + lh(7, 1.1), PAGE_W - MARGIN - 5, HDR_H + BOX_PY + lh(7, 1.1))
+
+      // Bullet points
       sf(doc, 'normal', 'normal', 9)
       doc.setTextColor(...C.strengthsTxt)
-      strLines.forEach((line, i) =>
-        doc.text(line, MARGIN + 5, HDR_H + BOX_PY + STR_LH * 0.82 + i * STR_LH)
-      )
+      let sy = HDR_H + BOX_PY + LABEL_H + STR_LH * 0.82
+      wrappedSentences.forEach(lines => {
+        // Draw bullet dot
+        doc.setFillColor(...C.strengthsTxt)
+        doc.circle(BULLET_X, sy - 1.2, 0.8, 'F')
+        // Draw text
+        lines.forEach((line, i) => {
+          doc.text(line, TEXT_X, sy + i * STR_LH)
+        })
+        sy += lines.length * STR_LH + 2
+      })
     }
 
     // ── Accent rule ──────────────────────────────────────────────────────────
@@ -273,9 +305,18 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     left.setY(BODY_Y)
 
     // ── 1. LEFT: Function Levels ──────────────────────────────────────────────
+
+    // Sort functions highest level first
+    const LEVEL_ORDER = ['Strategic Executive', 'Strategic Advisor', 'Strategic Manager', 'People Manager', 'Process Manager', 'Process Specialist']
+    const sortedFunctions = [...functions].sort((a, b) => {
+      const ai = LEVEL_ORDER.findIndex(l => a.name.includes(l))
+      const bi = LEVEL_ORDER.findIndex(l => b.name.includes(l))
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
+    })
+
     if (functions.length) {
       left.section('Function Levels')
-      functions.forEach(fn =>
+      sortedFunctions.forEach(fn =>
         left.barRow(getSeniorityLabel(fn.name, fn.years), fn.years, C.barFn, C.labelFn, fn.evidence)
       )
       left.setY(left.getY() + SP.sectionGap)
@@ -328,7 +369,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       industries.forEach(ind =>
         right.barRow(ind.name, ind.years, C.barInd, C.labelInd, ind.evidence)
       )
-      right.setY(right.getY() + SP.sectionGap)
+      right.setY(right.getY() + SP.sectionGap * 2)
     }
 
     // 6. Tools
@@ -336,7 +377,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       right.checkPage(24)
       let ry = right.getY()
 
-      sf(doc, 'bold', 'normal', 7)
+      sf(doc, 'bold', 'normal', 9)
       doc.setTextColor(...C.sectionLabel)
       doc.text('TOOLING & METHODS', COL_R, ry)
       doc.setDrawColor(...C.divider)
@@ -376,7 +417,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       right.checkPage(22)
       let ry = right.getY()
 
-      sf(doc, 'bold', 'normal', 7)
+      sf(doc, 'bold', 'normal', 9)
       doc.setTextColor(...C.sectionLabel)
       doc.text('EDUCATION & CREDENTIALS', COL_R, ry)
       doc.setDrawColor(...C.divider)
