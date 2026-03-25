@@ -36,6 +36,33 @@ const STYLES = `
   .card-reveal {
     animation: fade-in-up 0.4s ease forwards;
   }
+  .split-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: calc(100vh - 44px);
+  }
+  .left-panel {
+    padding: 32px 28px;
+    background: #faf8f4;
+    border-right: 0.5px solid #d8d0c4;
+  }
+  .right-panel {
+    padding: 28px 24px;
+    background: #f5f1eb;
+  }
+  @media (max-width: 700px) {
+    .split-layout {
+      grid-template-columns: 1fr;
+    }
+    .left-panel {
+      padding: 20px 16px;
+      border-right: none;
+      border-bottom: 0.5px solid #d8d0c4;
+    }
+    .right-panel {
+      padding: 20px 16px;
+    }
+  }
 `
 
 function InjectStyles() {
@@ -135,7 +162,7 @@ function Nav() {
   return (
     <div style={{
       background: '#2c3038',
-      padding: '10px 24px',
+      padding: '10px 16px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -153,7 +180,7 @@ export default function GeneratePage() {
   const [resumeText, setResumeText]   = useState('')
   const [profile, setProfile]         = useState(null)
   const [theme, setTheme]             = useState('bordeaux')
-  const [saveMode, setSaveMode]       = useState('save')
+  const [saveMode, setSaveMode]       = useState('download')
   const [loadingMsg, setLoadingMsg]   = useState('')
   const [error, setError]             = useState('')
   const [downloading, setDownloading] = useState(false)
@@ -222,10 +249,10 @@ export default function GeneratePage() {
       )}
 
       {/* Split layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 'calc(100vh - 44px)' }}>
+      <div className='split-layout'>
 
         {/* ── Left panel ── */}
-        <div style={{ padding: '32px 28px', background: '#faf8f4', borderRight: '0.5px solid #d8d0c4' }}>
+        <div className='left-panel'>
 
           {state === 'review' ? (
             <ReviewPanel
@@ -303,7 +330,7 @@ export default function GeneratePage() {
         </div>
 
         {/* ── Right panel ── */}
-        <div style={{ padding: '28px 24px', background: '#f5f1eb' }}>
+        <div className='right-panel'>
 
           {state === 'review' ? (
             <div className="card-reveal">

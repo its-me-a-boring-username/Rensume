@@ -1,38 +1,42 @@
 // src/components/SaveOptions.jsx
 // The two save mode radio options + download button.
-// Shown in the right panel of the generate/review page after classification.
+// "Download and save" is greyed out until account creation is implemented.
 
 export const SAVE_MODES = {
   save: {
     label: 'Download and save to my account',
-    recommended: true,
-    description: 'Get your PDF and a free account to retrieve your card anytime. Not visible to recruiters.',
+    recommended: false,
+    comingSoon: true,
+    description: 'Account creation coming soon.',
   },
   download: {
     label: 'Download only',
-    recommended: false,
-    description: "Get your PDF and a unique link to your card. There's no way to access your card if you lose the link, so save it. Not visible to recruiters.",
+    recommended: true,
+    comingSoon: false,
+    description: "Get your PDF and a unique link to your card. There's no way to access your card if you lose the link, so save it somewhere safe.",
   },
 }
 
 function RadioOption({ id, mode, selected, onSelect }) {
-  const isOn = selected === id
+  const isOn = selected === id && !mode.comingSoon
+  const disabled = mode.comingSoon
+
   return (
     <div
-      onClick={() => onSelect(id)}
+      onClick={() => !disabled && onSelect(id)}
       style={{
         display: 'flex',
         alignItems: 'flex-start',
         gap: 10,
-        background: isOn ? '#fdf8f6' : 'white',
+        background: disabled ? '#f5f5f5' : isOn ? '#fdf8f6' : 'white',
         border: isOn ? '1.5px solid #904060' : '0.5px solid #d8d0c4',
         borderRadius: 6,
         padding: '11px 13px',
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer',
         marginBottom: 8,
+        opacity: disabled ? 0.5 : 1,
       }}
     >
-      {/* Radio dot */}
       <div style={{
         width: 13,
         height: 13,
@@ -43,9 +47,9 @@ function RadioOption({ id, mode, selected, onSelect }) {
         flexShrink: 0,
       }} />
       <div>
-        <div style={{ fontSize: 10.5, fontWeight: 700, color: '#1a1410', marginBottom: 3 }}>
+        <div style={{ fontSize: 10.5, fontWeight: 700, color: disabled ? '#a09080' : '#1a1410', marginBottom: 3 }}>
           {mode.label}
-          {mode.recommended && (
+          {mode.recommended && !disabled && (
             <span style={{
               display: 'inline-block',
               fontSize: 8,
@@ -60,6 +64,21 @@ function RadioOption({ id, mode, selected, onSelect }) {
               Recommended
             </span>
           )}
+          {disabled && (
+            <span style={{
+              display: 'inline-block',
+              fontSize: 8,
+              fontWeight: 700,
+              padding: '1px 6px',
+              borderRadius: 3,
+              background: '#eeeeee',
+              color: '#a09080',
+              marginLeft: 6,
+              verticalAlign: 'middle',
+            }}>
+              Coming soon
+            </span>
+          )}
         </div>
         <div style={{ fontSize: 9.5, color: '#a09080', lineHeight: 1.6 }}>
           {mode.description}
@@ -69,13 +88,6 @@ function RadioOption({ id, mode, selected, onSelect }) {
   )
 }
 
-/**
- * Props:
- *   selected   — 'save' | 'download'
- *   onSelect   — (mode) => void
- *   onDownload — () => void
- *   loading    — bool
- */
 export default function SaveOptions({ selected, onSelect, onDownload, loading = false }) {
   return (
     <div>
