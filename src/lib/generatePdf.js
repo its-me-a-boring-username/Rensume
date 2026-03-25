@@ -375,18 +375,33 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       })
     }
 
-    // ── Knowledge Areas — left col if fits on page 1, otherwise right col ──────
+    // ── Knowledge Areas — measure first, then decide which column ───────────────
     if (knowledge_areas.length) {
-      // If left column is still on page 1, draw KA there
-      // Otherwise spill into right column where there is space
-      if (leftAfterFnPage === 1) {
-        left.setY(leftAfterFn)
+      // Estimate total height KA would need
+      const kaEstH = knowledge_areas.reduce((total, ka) => {
+        const evLines = parseEvidence(ka.evidence)
+        let evH = 0
+        if (evLines.length > 0) {
+          sf(doc, 'normal', 'normal', 9)
+          const wrapped = evLines.flatMap(l => doc.splitTextToSize(l, COL_W - 3.5 - 7))
+          evH = SP.barToEvidence + wrapped.length * SP.evidenceLH + SP.evidenceToNext
+        } else {
+          evH = SP.noEvidenceGap
+        }
+        return total + SP.barH + evH
+      }, SP.sectionToFirst + 6) // section heading
+
+      // Check if KA fits in left column below Function Levels
+      const leftSpaceRemaining = FOOT_Y - 4 - left.getY()
+      const kaFitsLeft = leftAfterFnPage === 1 && leftSpaceRemaining >= kaEstH
+
+      if (kaFitsLeft) {
         left.section('Knowledge Areas')
         knowledge_areas.forEach(ka =>
           left.barRow(ka.name, ka.years, C.barKa, C.labelKa, ka.evidence)
         )
       } else {
-        // Left overflowed — draw KA in right column below existing content
+        // Not enough space on left — draw in right column
         doc.setPage(right.getPage())
         right.section('Knowledge Areas')
         knowledge_areas.forEach(ka =>
