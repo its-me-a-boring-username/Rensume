@@ -217,7 +217,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
 
     // ── Header ───────────────────────────────────────────────────────────────
     sf(doc, 'bold', 'normal', 11)
-    const QR_TOTAL = 24 + 1.5 * 2 + 4  // QR size + padding + gap
+    const QR_TOTAL = 22 + 1.5 * 2 + 6  // QR size + padding + gap
     const sumLines = doc.splitTextToSize(summary, PAGE_W - MARGIN * 2 - QR_TOTAL)
     const SUM_LH   = lh(11, 1.45)
     const PAD_T    = 5
@@ -238,77 +238,57 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
     const sumY = PAD_T + LOGO_H + PAD_M + SUM_LH * 0.82
     sumLines.forEach((line, i) => doc.text(line, MARGIN, sumY + i * SUM_LH))
 
-    // QR code — top right of header, white padded box
-    const QR_SIZE = 24    // mm — scannable but not overwhelming
+    // QR code — flush to right edge of page, vertically centered in header
+    const QR_SIZE = 22    // mm
     const QR_PAD  = 1.5   // mm white padding inside box
-    const QR_X    = PAGE_W - MARGIN - QR_SIZE - QR_PAD * 2
-    const QR_Y    = (HDR_H - QR_SIZE - QR_PAD * 2) / 2  // vertically centered in header
-    // White background box
+    const BOX_W   = QR_SIZE + QR_PAD * 2
+    const BOX_H   = QR_SIZE + QR_PAD * 2
+    const QR_X    = PAGE_W - BOX_W  // flush to right edge
+    const QR_Y    = (HDR_H - BOX_H) / 2  // vertically centered in header
     doc.setFillColor(255, 255, 255)
-    doc.rect(QR_X, QR_Y, QR_SIZE + QR_PAD * 2, QR_SIZE + QR_PAD * 2, 'F')
-    // QR image
+    doc.rect(QR_X, QR_Y, BOX_W, BOX_H, 'F')
     doc.addImage(qrDataUrl, 'PNG', QR_X + QR_PAD, QR_Y + QR_PAD, QR_SIZE, QR_SIZE)
 
-    // ── Strengths band ───────────────────────────────────────────────────────
+    // ── Accent rule ──────────────────────────────────────────────────────────
+    doc.setFillColor(...C.accent)
+    doc.rect(0, HDR_H, PAGE_W, ACC_H, 'F')
+
+    // ── Strengths band (below accent rule) ───────────────────────────────────
     let strengthsBandH = 0
     if (strengths) {
-      const LABEL_H  = lh(7, 1.8)   // height of "STRENGTHS" label
-      const STR_LH   = lh(9, 1.55)
-      const BOX_PY   = 4
-      const BULLET_X = MARGIN + 5
-      const TEXT_X   = MARGIN + 10
-      const TEXT_W   = PAGE_W - MARGIN * 2 - 15
+      const LABEL_H = lh(7, 1.8)
+      const STR_LH  = lh(9, 1.55)
+      const BOX_PY  = 4
+      const TEXT_X  = MARGIN + 5
+      const TEXT_W  = PAGE_W - MARGIN * 2 - 10
+      const STR_Y   = HDR_H + ACC_H
 
-      // Split strengths into sentences for bullets
-      const sentences = strengths
-        .split(/(?<=[.!?])\s+/)
-        .map(s => s.trim())
-        .filter(Boolean)
-
-      // Pre-wrap each sentence
       sf(doc, 'normal', 'normal', 9)
-      const wrappedSentences = sentences.map(s => doc.splitTextToSize(s, TEXT_W))
-      const totalLines = wrappedSentences.reduce((t, l) => t + l.length, 0)
-      const totalBulletH = wrappedSentences.reduce((t, lines) => t + lines.length * STR_LH + 2, 0)
-
-      strengthsBandH = LABEL_H + BOX_PY + totalBulletH + BOX_PY
+      const strLines = doc.splitTextToSize(strengths, TEXT_W)
+      strengthsBandH = LABEL_H + BOX_PY + strLines.length * STR_LH + BOX_PY
 
       doc.setFillColor(...C.strengthsBg)
-      doc.rect(0, HDR_H, PAGE_W, strengthsBandH, 'F')
+      doc.rect(0, STR_Y, PAGE_W, strengthsBandH, 'F')
       doc.setDrawColor(...C.divider)
       doc.setLineWidth(0.25)
-      doc.line(0, HDR_H + strengthsBandH, PAGE_W, HDR_H + strengthsBandH)
+      doc.line(0, STR_Y + strengthsBandH, PAGE_W, STR_Y + strengthsBandH)
 
       // Label
       sf(doc, 'bold', 'normal', 7)
       doc.setTextColor(...C.sectionLabel)
-      doc.text('STRENGTHS', MARGIN + 5, HDR_H + BOX_PY + lh(7, 0.8))
+      doc.text('STRENGTHS', TEXT_X, STR_Y + BOX_PY + lh(7, 0.8))
       doc.setDrawColor(...C.divider)
       doc.setLineWidth(0.25)
-      doc.line(MARGIN + 5, HDR_H + BOX_PY + lh(7, 1.1), PAGE_W - MARGIN - 5, HDR_H + BOX_PY + lh(7, 1.1))
+      doc.line(TEXT_X, STR_Y + BOX_PY + lh(7, 1.1), PAGE_W - MARGIN - 5, STR_Y + BOX_PY + lh(7, 1.1))
 
-      // Bullet points
+      // Paragraph
       sf(doc, 'normal', 'normal', 9)
       doc.setTextColor(...C.strengthsTxt)
-      let sy = HDR_H + BOX_PY + LABEL_H + STR_LH * 0.82
-      wrappedSentences.forEach(lines => {
-        // Draw bullet dot
-        doc.setFillColor(...C.strengthsTxt)
-        doc.circle(BULLET_X, sy - 1.2, 0.8, 'F')
-        // Draw text
-        lines.forEach((line, i) => {
-          doc.text(line, TEXT_X, sy + i * STR_LH)
-        })
-        sy += lines.length * STR_LH + 2
-      })
+      const sy = STR_Y + BOX_PY + LABEL_H + STR_LH * 0.82
+      strLines.forEach((line, i) => doc.text(line, TEXT_X, sy + i * STR_LH))
     }
 
-    // ── Accent rule ──────────────────────────────────────────────────────────
-    const accentY = HDR_H + strengthsBandH
-    doc.setFillColor(...C.accent)
-    doc.rect(0, accentY, PAGE_W, ACC_H, 'F')
-
-    const BODY_Y = accentY + ACC_H + 7
+    const BODY_Y = HDR_H + ACC_H + strengthsBandH + 7
 
     // ── Columns ──────────────────────────────────────────────────────────────
     // Draw order:

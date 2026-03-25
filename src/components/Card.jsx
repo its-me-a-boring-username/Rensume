@@ -196,18 +196,15 @@ export default function Card({ profile, theme = 'bordeaux', showEvidence = false
       {/* Accent rule */}
       <div style={{ ...t.accent, height: 2 }} />
 
-      {/* Strengths — full width under header */}
+      {/* Strengths — full width band with label */}
       {strengths && (
         <div style={{ ...t.strengthsBg, padding: '8px 18px 10px' }}>
-          <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3, borderBottom: '0.5px solid rgba(0,0,0,0.1)' }}>
+          <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
             Strengths
           </div>
-          {strengths.split(/(?<=[.!?])\s+/).filter(Boolean).map((sentence, i) => (
-            <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 3 }}>
-              <span style={{ ...t.strengthsText, fontFamily: F.body, fontSize: 9, flexShrink: 0, marginTop: 1 }}>·</span>
-              <span style={{ ...t.strengthsText, fontFamily: F.body, fontSize: 9, lineHeight: 1.6 }}>{sentence.trim()}</span>
-            </div>
-          ))}
+          <div style={{ ...t.strengthsText, fontFamily: F.body, fontSize: 9, lineHeight: 1.65 }}>
+            {strengths}
+          </div>
         </div>
       )}
 
