@@ -458,12 +458,12 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
         doc.text(tool, tx + tw / 2, ry + CHIP_H / 2 + lh(7.5, 0.28), { align: 'center' })
         tx += tw + CHIP_GAP
       })
-      right.setY(right.getY() + CHIP_H + SP.sectionGap * 3)
+      right.setY(right.getY() + CHIP_H + SP.sectionGap * 2)
     }
 
     // 7. Credentials
     if (credentials.length) {
-      right.checkPage(22)
+      right.checkPage(14)
       let ry = right.getY()
 
       sf(doc, 'bold', 'normal', 9)
@@ -476,7 +476,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
       right.setY(ry)
 
       credentials.forEach(cred => {
-        right.checkPage(16)
+        right.checkPage(12)
         ry = right.getY()
 
         const typeLabel = (cred.type || '').toUpperCase()
