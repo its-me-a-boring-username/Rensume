@@ -239,12 +239,13 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
     sumLines.forEach((line, i) => doc.text(line, MARGIN, sumY + i * SUM_LH))
 
     // QR code — flush to right edge of page, vertically centered in header
-    const QR_SIZE = 22    // mm
-    const QR_PAD  = 1.5   // mm white padding inside box
-    const BOX_W   = QR_SIZE + QR_PAD * 2
-    const BOX_H   = QR_SIZE + QR_PAD * 2
-    const QR_X    = PAGE_W - BOX_W  // flush to right edge
-    const QR_Y    = (HDR_H - BOX_H) / 2  // vertically centered in header
+    const QR_SIZE   = 22    // mm
+    const QR_PAD    = 1.5   // mm white padding inside box
+    const QR_MARGIN = 5     // mm gap from edges — same on top, right, bottom
+    const BOX_W     = QR_SIZE + QR_PAD * 2
+    const BOX_H     = QR_SIZE + QR_PAD * 2
+    const QR_X      = PAGE_W - QR_MARGIN - BOX_W
+    const QR_Y      = QR_MARGIN
     doc.setFillColor(255, 255, 255)
     doc.rect(QR_X, QR_Y, BOX_W, BOX_H, 'F')
     doc.addImage(qrDataUrl, 'PNG', QR_X + QR_PAD, QR_Y + QR_PAD, QR_SIZE, QR_SIZE)
@@ -261,7 +262,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
       const BOX_PY  = 4
       const TEXT_X  = MARGIN + 5
       const TEXT_W  = PAGE_W - MARGIN * 2 - 10
-      const STR_Y   = HDR_H + ACC_H
+      const STR_Y   = HDR_H + ACC_H + 6
 
       sf(doc, 'normal', 'normal', 9)
       const strLines = doc.splitTextToSize(strengths, TEXT_W)
@@ -288,7 +289,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
       strLines.forEach((line, i) => doc.text(line, TEXT_X, sy + i * STR_LH))
     }
 
-    const BODY_Y = HDR_H + ACC_H + strengthsBandH + 7
+    const BODY_Y = HDR_H + ACC_H + (strengthsBandH > 0 ? 6 + strengthsBandH + 10 : 0) + 7
 
     // ── Columns ──────────────────────────────────────────────────────────────
     // Draw order:
