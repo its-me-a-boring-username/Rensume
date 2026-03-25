@@ -9,28 +9,72 @@ import { getSeniorityLabel } from './classifier'
 
 // ─── Colors ──────────────────────────────────────────────────────────────────
 
-const C = {
-  headerBg:     [44,  48,  56],
-  accent:       [144, 64,  96],
-  logoText:     [144, 64,  96],
-  summaryText:  [200, 208, 220],
-  bodyBg:       [250, 248, 244],
-  sectionLabel: [80,  72,  64],
-  divider:      [216, 208, 200],
-  barFn:        [44,  48,  56],   labelFn:  [44,  48,  56],
-  barKa:        [144, 64,  96],   labelKa:  [144, 64,  96],
-  barInd:       [180, 172, 164],  labelInd: [48,  40,  32],
-  evidenceText: [112, 96,  80],
-  strengthsBg:  [237, 234, 230],
-  strengthsTxt: [80,  64,  48],
-  toolBg:       [237, 234, 230],
-  toolText:     [48,  40,  32],
-  toolBdr:      [200, 192, 184],
-  credType:     [120, 104, 88],
-  credName:     [26,  20,  16],
-  credSub:      [88,  72,  58],
-  footerLeft:   [140, 130, 116],
-  footerRight:  [104, 40,  72],
+function h(hex) {
+  const v = hex.replace('#', '')
+  return [parseInt(v.slice(0,2),16), parseInt(v.slice(2,4),16), parseInt(v.slice(4,6),16)]
+}
+
+const THEME_COLORS = {
+  bordeaux: {
+    headerBg:    h('#2c3038'), accent:      h('#904060'), logoText:    h('#904060'),
+    summaryText: h('#909aa8'), bodyBg:      h('#faf8f4'), sectionLabel:h('#605850'),
+    divider:     h('#d8d0c8'),
+    barFn: h('#2c3038'), labelFn: h('#2c3038'),
+    barKa: h('#904060'), labelKa: h('#904060'),
+    barInd:h('#c8c0b8'), labelInd:h('#403830'),
+    evidenceText:h('#706050'), strengthsBg:h('#edeae6'), strengthsTxt:h('#504030'),
+    toolBg:h('#edeae6'), toolText:h('#403830'), toolBdr:h('#c8c0b8'),
+    credType:h('#a09080'), credName:h('#1a1410'), credSub:h('#706050'),
+    footerLeft:h('#b0a898'), footerRight:h('#682848'),
+  },
+  ember: {
+    headerBg:    h('#2c3038'), accent:      h('#a84040'), logoText:    h('#a84040'),
+    summaryText: h('#909aa8'), bodyBg:      h('#faf8f4'), sectionLabel:h('#605850'),
+    divider:     h('#d8d0c8'),
+    barFn: h('#2c3038'), labelFn: h('#2c3038'),
+    barKa: h('#a84040'), labelKa: h('#a84040'),
+    barInd:h('#c8c0b8'), labelInd:h('#403830'),
+    evidenceText:h('#706050'), strengthsBg:h('#edeae6'), strengthsTxt:h('#504030'),
+    toolBg:h('#edeae6'), toolText:h('#403830'), toolBdr:h('#c8c0b8'),
+    credType:h('#a09080'), credName:h('#1a1410'), credSub:h('#706050'),
+    footerLeft:h('#b0a898'), footerRight:h('#802828'),
+  },
+  oxford: {
+    headerBg:    h('#182030'), accent:      h('#3a6aaa'), logoText:    h('#3a6aaa'),
+    summaryText: h('#8090a8'), bodyBg:      h('#f7f9fb'), sectionLabel:h('#485868'),
+    divider:     h('#c8d0d8'),
+    barFn: h('#182030'), labelFn: h('#182030'),
+    barKa: h('#3a6aaa'), labelKa: h('#3a6aaa'),
+    barInd:h('#b8c0c8'), labelInd:h('#303848'),
+    evidenceText:h('#485868'), strengthsBg:h('#e8eaed'), strengthsTxt:h('#283848'),
+    toolBg:h('#e8eaed'), toolText:h('#303848'), toolBdr:h('#b8c0c8'),
+    credType:h('#8898a8'), credName:h('#1a1410'), credSub:h('#485868'),
+    footerLeft:h('#90a0b0'), footerRight:h('#284880'),
+  },
+  gilt: {
+    headerBg:    h('#111111'), accent:      h('#c8a96e'), logoText:    h('#c8a96e'),
+    summaryText: h('#909090'), bodyBg:      h('#faf8f4'), sectionLabel:h('#706050'),
+    divider:     h('#d8d0c4'),
+    barFn: h('#111111'), labelFn: h('#111111'),
+    barKa: h('#c8a96e'), labelKa: h('#7a6030'),
+    barInd:h('#ccc8c0'), labelInd:h('#484038'),
+    evidenceText:h('#706050'), strengthsBg:h('#eeece8'), strengthsTxt:h('#504030'),
+    toolBg:h('#eeece8'), toolText:h('#484038'), toolBdr:h('#ccc8c0'),
+    credType:h('#a09070'), credName:h('#1a1410'), credSub:h('#706050'),
+    footerLeft:h('#b0a890'), footerRight:h('#906830'),
+  },
+  sterling: {
+    headerBg:    h('#252a30'), accent:      h('#8898a8'), logoText:    h('#8898a8'),
+    summaryText: h('#8090a0'), bodyBg:      h('#f8f9fa'), sectionLabel:h('#505860'),
+    divider:     h('#c8ccd0'),
+    barFn: h('#252a30'), labelFn: h('#252a30'),
+    barKa: h('#8898a8'), labelKa: h('#505860'),
+    barInd:h('#c0c4c8'), labelInd:h('#383c42'),
+    evidenceText:h('#505860'), strengthsBg:h('#eaecee'), strengthsTxt:h('#383c42'),
+    toolBg:h('#eaecee'), toolText:h('#383c42'), toolBdr:h('#c0c4c8'),
+    credType:h('#8898a8'), credName:h('#1a1410'), credSub:h('#505860'),
+    footerLeft:h('#9098a0'), footerRight:h('#506070'),
+  },
 }
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
@@ -153,7 +197,7 @@ function makeColumn(doc, colX, startPage, reusePages) {
     checkPage(ROW_H + evBlockH + SP.noEvidenceGap)
 
     doc.setFillColor(...barColor)
-    doc.roundedRect(colX, y, BAR_W, ROW_H, BAR_R, BAR_R, 'F')
+    doc.rect(colX, y + (ROW_H - ROW_H * 0.7) / 2, 2, ROW_H * 0.7, 'F')
 
     sf(doc, 'bold', 'normal', 10)
     doc.setTextColor(...labelColor)
@@ -192,6 +236,7 @@ function makeColumn(doc, colX, startPage, reusePages) {
 export async function downloadCardPdf(profile, themeName = 'bordeaux') {
   try {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+    const C = THEME_COLORS[themeName] || THEME_COLORS.bordeaux
 
     registerIBMPlexSans(doc)
 
