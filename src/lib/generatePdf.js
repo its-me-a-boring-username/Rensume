@@ -21,7 +21,7 @@ const C = {
   barKa:        [144, 64,  96],   labelKa:  [144, 64,  96],
   barInd:       [180, 172, 164],  labelInd: [48,  40,  32],
   evidenceText: [112, 96,  80],
-  strengthsBg:  [245, 241, 235],
+  strengthsBg:  [237, 234, 230],
   strengthsTxt: [80,  64,  48],
   toolBg:       [237, 234, 230],
   toolText:     [48,  40,  32],
@@ -262,7 +262,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
       const BOX_PY  = 4
       const TEXT_X  = MARGIN + 5
       const TEXT_W  = PAGE_W - MARGIN * 2 - 10
-      const STR_Y   = HDR_H + ACC_H + 6
+      const STR_Y   = HDR_H + ACC_H + 8
 
       sf(doc, 'normal', 'normal', 9)
       const strLines = doc.splitTextToSize(strengths, TEXT_W)
@@ -289,7 +289,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
       strLines.forEach((line, i) => doc.text(line, TEXT_X, sy + i * STR_LH))
     }
 
-    const BODY_Y = HDR_H + ACC_H + (strengthsBandH > 0 ? 6 + strengthsBandH + 10 : 0) + 7
+    const BODY_Y = HDR_H + ACC_H + (strengthsBandH > 0 ? 8 + strengthsBandH + 8 : 0) + 7
 
     // ── Columns ──────────────────────────────────────────────────────────────
     // Draw order:
@@ -370,7 +370,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
       industries.forEach(ind =>
         right.barRow(ind.name, ind.years, C.barInd, C.labelInd, ind.evidence)
       )
-      right.setY(right.getY() + SP.sectionGap * 2)
+      right.setY(right.getY() + SP.sectionGap)
     }
 
     // 6. Tools
@@ -410,7 +410,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
         doc.text(tool, tx + tw / 2, ry + CHIP_H / 2 + lh(7.5, 0.28), { align: 'center' })
         tx += tw + CHIP_GAP
       })
-      right.setY(right.getY() + CHIP_H + SP.sectionGap + 2)
+      right.setY(right.getY() + CHIP_H + SP.sectionGap * 3)
     }
 
     // 7. Credentials
