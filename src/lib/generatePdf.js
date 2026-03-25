@@ -268,10 +268,10 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
       strengthsBandH = LABEL_H + BOX_PY + strLines.length * STR_LH + BOX_PY
 
       doc.setFillColor(...C.strengthsBg)
-      doc.rect(0, STR_Y, PAGE_W, strengthsBandH, 'F')
+      doc.rect(MARGIN, STR_Y, PAGE_W - MARGIN * 2, strengthsBandH, 'F')
       doc.setDrawColor(...C.divider)
       doc.setLineWidth(0.25)
-      doc.line(0, STR_Y + strengthsBandH, PAGE_W, STR_Y + strengthsBandH)
+      doc.line(MARGIN, STR_Y + strengthsBandH, PAGE_W - MARGIN, STR_Y + strengthsBandH)
 
       // Label
       sf(doc, 'bold', 'normal', 7)
