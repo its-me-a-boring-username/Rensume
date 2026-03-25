@@ -2,14 +2,18 @@
 // The card generation page. Manages two states:
 //   State 1 — resume input
 //   State 2 — review + theme picker + save options
+//
+// PDF generation uses html2canvas to capture the rendered Card DOM node,
+// then embeds it in a jsPDF document. No manual drawing — what you see is what you get.
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { classifyResume } from '../lib/classifier'
 import Card from '../components/Card'
 import ThemePicker from '../components/ThemePicker'
 import SaveOptions from '../components/SaveOptions'
 import ReviewPanel from '../components/ReviewPanel'
-import { downloadCardPdf } from '../lib/generatePdf'
+import { jsPDF } from 'jspdf'
+import html2canvas from 'html2canvas'
 
 // ─── Keyframe animations (injected once) ─────────────────────────────────────
 
@@ -148,7 +152,7 @@ function Nav() {
 // ─── GeneratePage ─────────────────────────────────────────────────────────────
 
 export default function GeneratePage() {
-  const [state, setState]             = useState('input')   // 'input' | 'loading' | 'review'
+  const [state, setState]             = useState('input')
   const [resumeText, setResumeText]   = useState('')
   const [profile, setProfile]         = useState(null)
   const [theme, setTheme]             = useState('bordeaux')
@@ -156,6 +160,9 @@ export default function GeneratePage() {
   const [loadingMsg, setLoadingMsg]   = useState('')
   const [error, setError]             = useState('')
   const [downloading, setDownloading] = useState(false)
+
+  // Ref on the wrapper div around the Card — plain DOM element, no forwardRef needed
+  const cardRef = useRef(null)
 
   const loading = state === 'loading'
 
@@ -190,14 +197,38 @@ export default function GeneratePage() {
     // TODO: insert into card_flags via Supabase
   }
 
-  // ── Download ────────────────────────────────────────────────────────────────
+  // ── Download — html2canvas captures the live Card DOM node ──────────────────
 
   const handleDownload = async () => {
     if (!profile) return
+
+    if (!cardRef.current) {
+      alert('PDF error: card element not found. Please try again.')
+      return
+    }
+
     setDownloading(true)
     try {
-      downloadCardPdf(profile, theme)
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: null,
+        logging: false,
+      })
+
+      const A4_W   = 210
+      const A4_H   = 297
+      const MARGIN = 14
+      const imgW   = A4_W - MARGIN * 2
+      const imgH   = imgW * (canvas.height / canvas.width)
+      const topY   = imgH < A4_H - MARGIN * 2 ? (A4_H - imgH) / 2 : MARGIN
+
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+      doc.addImage(canvas.toDataURL('image/png'), 'PNG', MARGIN, topY, imgW, imgH)
+      doc.save(`rensume-card-${theme}-${Date.now()}.pdf`)
+
     } catch (e) {
+      alert(`PDF error: ${e.message}`)
       console.error('PDF generation failed:', e)
     } finally {
       setDownloading(false)
@@ -310,9 +341,12 @@ export default function GeneratePage() {
               <div style={{ marginBottom: 16 }}>
                 <ThemePicker theme={theme} onChange={setTheme} />
               </div>
-              <div style={{ marginBottom: 16 }}>
+
+              {/* Wrapper div carries the ref — no forwardRef needed on Card */}
+              <div ref={cardRef} style={{ marginBottom: 16 }}>
                 <Card profile={profile} theme={theme} showEvidence />
               </div>
+
               <SaveOptions
                 selected={saveMode}
                 onSelect={setSaveMode}
