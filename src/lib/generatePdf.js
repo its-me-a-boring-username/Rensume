@@ -259,11 +259,20 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     const BODY_Y = accentY + ACC_H + 7
 
     // ── Columns ──────────────────────────────────────────────────────────────
+    // Draw order:
+    //   1. LEFT: Function Levels (with evidence)
+    //   2. Measure remaining left space, split KA into left-fits / right-overflow
+    //   3. LEFT: KA items that fit
+    //   4. RIGHT: KA overflow items (if any)
+    //   5. RIGHT: Industries
+    //   6. RIGHT: Tools
+    //   7. RIGHT: Credentials
+
     const left  = makeColumn(doc, COL_L, 1, false)
     const right = makeColumn(doc, COL_R, 1, true)
     left.setY(BODY_Y)
 
-    // LEFT: Function Levels
+    // ── 1. LEFT: Function Levels ──────────────────────────────────────────────
     if (functions.length) {
       left.section('Function Levels')
       functions.forEach(fn =>
@@ -272,14 +281,48 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       left.setY(left.getY() + SP.sectionGap)
     }
 
-    // Track where left column ends after Function Levels
-    const leftAfterFn = left.getY()
-    const leftAfterFnPage = left.getPage()
+    // ── 2. Measure & split KA ─────────────────────────────────────────────────
+    function kaItemHeight(ka) {
+      const evLines = parseEvidence(ka.evidence)
+      if (evLines.length === 0) return SP.barH + SP.noEvidenceGap
+      sf(doc, 'normal', 'normal', 9)
+      const wrapped = evLines.flatMap(l => doc.splitTextToSize(l, COL_W - 3.5 - 7))
+      return SP.barH + SP.barToEvidence + wrapped.length * SP.evidenceLH + SP.evidenceToNext
+    }
 
-    // RIGHT: Industries (draw right column first so we know how much space is available)
+    const leftSpace   = FOOT_Y - 4 - left.getY()
+    const kaLeft  = []
+    const kaRight = []
+    let usedH = SP.sectionToFirst + 6  // section heading height
+    let overflowed = false
+
+    for (const ka of knowledge_areas) {
+      const h = kaItemHeight(ka)
+      if (!overflowed && usedH + h <= leftSpace) {
+        kaLeft.push(ka); usedH += h
+      } else {
+        overflowed = true; kaRight.push(ka)
+      }
+    }
+
+    // ── 3. LEFT: KA items that fit ────────────────────────────────────────────
+    if (kaLeft.length > 0) {
+      left.section('Knowledge Areas')
+      kaLeft.forEach(ka => left.barRow(ka.name, ka.years, C.barKa, C.labelKa, ka.evidence))
+    }
+
+    // ── 4–7. RIGHT column ─────────────────────────────────────────────────────
     doc.setPage(1)
     right.setY(BODY_Y)
 
+    // 4. KA overflow
+    if (kaRight.length > 0) {
+      right.section(kaLeft.length > 0 ? 'Knowledge Areas (cont.)' : 'Knowledge Areas')
+      kaRight.forEach(ka => right.barRow(ka.name, ka.years, C.barKa, C.labelKa, ka.evidence))
+      right.setY(right.getY() + SP.sectionGap)
+    }
+
+    // 5. Industries
     if (industries.length) {
       right.section('Industries')
       industries.forEach(ind =>
@@ -288,7 +331,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       right.setY(right.getY() + SP.sectionGap)
     }
 
-    // RIGHT: Tools
+    // 6. Tools
     if (tools.length) {
       right.checkPage(24)
       let ry = right.getY()
@@ -328,7 +371,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       right.setY(right.getY() + CHIP_H + SP.sectionGap + 2)
     }
 
-    // RIGHT: Credentials
+    // 7. Credentials
     if (credentials.length) {
       right.checkPage(22)
       let ry = right.getY()
@@ -373,41 +416,6 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
         ry += 5
         right.setY(ry)
       })
-    }
-
-    // ── Knowledge Areas — measure first, then decide which column ───────────────
-    if (knowledge_areas.length) {
-      // Estimate total height KA would need
-      const kaEstH = knowledge_areas.reduce((total, ka) => {
-        const evLines = parseEvidence(ka.evidence)
-        let evH = 0
-        if (evLines.length > 0) {
-          sf(doc, 'normal', 'normal', 9)
-          const wrapped = evLines.flatMap(l => doc.splitTextToSize(l, COL_W - 3.5 - 7))
-          evH = SP.barToEvidence + wrapped.length * SP.evidenceLH + SP.evidenceToNext
-        } else {
-          evH = SP.noEvidenceGap
-        }
-        return total + SP.barH + evH
-      }, SP.sectionToFirst + 6) // section heading
-
-      // Check if KA fits in left column below Function Levels
-      const leftSpaceRemaining = FOOT_Y - 4 - left.getY()
-      const kaFitsLeft = leftAfterFnPage === 1 && leftSpaceRemaining >= kaEstH
-
-      if (kaFitsLeft) {
-        left.section('Knowledge Areas')
-        knowledge_areas.forEach(ka =>
-          left.barRow(ka.name, ka.years, C.barKa, C.labelKa, ka.evidence)
-        )
-      } else {
-        // Not enough space on left — draw in right column
-        doc.setPage(right.getPage())
-        right.section('Knowledge Areas')
-        knowledge_areas.forEach(ka =>
-          right.barRow(ka.name, ka.years, C.barKa, C.labelKa, ka.evidence)
-        )
-      }
     }
 
     // ── Footer on every page ─────────────────────────────────────────────────
