@@ -51,12 +51,12 @@ const IBM    = 'IBMPlexSans'
 function lhFn(pt, ratio) { return pt * 0.3528 * ratio }
 
 const SP = {
-  barH:           lhFn(10, 1.7),
-  barToEvidence:  3,
-  evidenceLH:     lhFn(9, 1.5),
-  evidenceToNext: 2,
-  noEvidenceGap:  4,
-  sectionToFirst: 7,
+  barH:           lhFn(10, 1.5),   // compact bar height
+  barToEvidence:  2,               // tight gap bar -> evidence
+  evidenceLH:     lhFn(9, 1.45),  // compact line height
+  evidenceToNext: 2,               // tight gap after evidence
+  noEvidenceGap:  3,               // gap between items without evidence
+  sectionToFirst: 6,
   sectionGap:     4,
 }
 
@@ -156,11 +156,11 @@ function makeColumn(doc, colX, startPage, reusePages) {
 
     sf(doc, 'bold', 'normal', 10)
     doc.setTextColor(...labelColor)
-    doc.text(label, colX + BAR_W + 5, y + ROW_H / 2 + lh(10, 0.38))
+    doc.text(label, colX + BAR_W + 5, y + ROW_H / 2 + lh(10, 0.28))
 
     sf(doc, 'bold', 'normal', 10)
     doc.setTextColor(...labelColor)
-    doc.text(`${yearsVal}y`, colX + COL_W, y + ROW_H / 2 + lh(10, 0.38), { align: 'right' })
+    doc.text(`${yearsVal}y`, colX + COL_W, y + ROW_H / 2 + lh(10, 0.28), { align: 'right' })
 
     y += ROW_H
 
@@ -211,9 +211,9 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     sf(doc, 'bold', 'normal', 11)
     const sumLines = doc.splitTextToSize(summary, PAGE_W - MARGIN * 2 - 2)
     const SUM_LH   = lh(11, 1.45)
-    const PAD_T    = 7
-    const PAD_M    = 5
-    const PAD_B    = 7
+    const PAD_T    = 5
+    const PAD_M    = 4
+    const PAD_B    = 5
     const LOGO_H   = lh(7, 1)
     const HDR_H    = PAD_T + LOGO_H + PAD_M + sumLines.length * SUM_LH + PAD_B
 
@@ -235,7 +235,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       sf(doc, 'normal', 'normal', 9)
       const strLines = doc.splitTextToSize(strengths, PAGE_W - MARGIN * 2 - 10)
       const STR_LH   = lh(9, 1.55)
-      const BOX_PY   = 5.5
+      const BOX_PY   = 4
       strengthsBandH = strLines.length * STR_LH + BOX_PY * 2
 
       doc.setFillColor(...C.strengthsBg)
@@ -256,7 +256,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
     doc.setFillColor(...C.accent)
     doc.rect(0, accentY, PAGE_W, ACC_H, 'F')
 
-    const BODY_Y = accentY + ACC_H + 10
+    const BODY_Y = accentY + ACC_H + 7
 
     // ── Columns ──────────────────────────────────────────────────────────────
     const left  = makeColumn(doc, COL_L, 1, false)
@@ -326,7 +326,7 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
         doc.rect(tx, ry, tw, CHIP_H, 'S')
         doc.setTextColor(...C.toolText)
         sf(doc, 'bold', 'normal', 7.5)
-        doc.text(tool, tx + tw / 2, ry + CHIP_H / 2 + lh(7.5, 0.38), { align: 'center' })
+        doc.text(tool, tx + tw / 2, ry + CHIP_H / 2 + lh(7.5, 0.28), { align: 'center' })
         tx += tw + CHIP_GAP
       })
       right.setY(right.getY() + CHIP_H + SP.sectionGap + 2)
