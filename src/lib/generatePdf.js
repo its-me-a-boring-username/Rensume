@@ -272,15 +272,11 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
       left.setY(left.getY() + SP.sectionGap)
     }
 
-    // LEFT: Knowledge Areas
-    if (knowledge_areas.length) {
-      left.section('Knowledge Areas')
-      knowledge_areas.forEach(ka =>
-        left.barRow(ka.name, ka.years, C.barKa, C.labelKa, ka.evidence)
-      )
-    }
+    // Track where left column ends after Function Levels
+    const leftAfterFn = left.getY()
+    const leftAfterFnPage = left.getPage()
 
-    // RIGHT: Industries
+    // RIGHT: Industries (draw right column first so we know how much space is available)
     doc.setPage(1)
     right.setY(BODY_Y)
 
@@ -377,6 +373,26 @@ export function downloadCardPdf(profile, themeName = 'bordeaux') {
         ry += 5
         right.setY(ry)
       })
+    }
+
+    // ── Knowledge Areas — left col if fits on page 1, otherwise right col ──────
+    if (knowledge_areas.length) {
+      // If left column is still on page 1, draw KA there
+      // Otherwise spill into right column where there is space
+      if (leftAfterFnPage === 1) {
+        left.setY(leftAfterFn)
+        left.section('Knowledge Areas')
+        knowledge_areas.forEach(ka =>
+          left.barRow(ka.name, ka.years, C.barKa, C.labelKa, ka.evidence)
+        )
+      } else {
+        // Left overflowed — draw KA in right column below existing content
+        doc.setPage(right.getPage())
+        right.section('Knowledge Areas')
+        knowledge_areas.forEach(ka =>
+          right.barRow(ka.name, ka.years, C.barKa, C.labelKa, ka.evidence)
+        )
+      }
     }
 
     // ── Footer on every page ─────────────────────────────────────────────────
