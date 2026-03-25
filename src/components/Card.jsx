@@ -281,7 +281,7 @@ export default function Card({ profile, theme = 'bordeaux', showEvidence = false
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 10 }}>
                 {tools.map((tool, i) => (
-                  <span key={i} style={{ fontFamily: F.body, fontSize: 8, fontWeight: 700, padding: '2px 6px', borderRadius: 2, background: '#edeae6', color: '#403830', border: '0.5px solid #c8c0b8' }}>
+                  <span key={i} style={{ fontFamily: F.body, fontSize: 8, fontWeight: 700, padding: '2px 6px', borderRadius: 2, background: '#edeae6', color: '#403830', border: '1px solid #c8c0b8' }}>
                     {tool}
                   </span>
                 ))}

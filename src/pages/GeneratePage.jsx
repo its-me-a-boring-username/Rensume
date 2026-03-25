@@ -218,13 +218,19 @@ export default function GeneratePage() {
 
       const A4_W   = 210
       const A4_H   = 297
-      const MARGIN = 14
-      const imgW   = A4_W - MARGIN * 2
-      const imgH   = imgW * (canvas.height / canvas.width)
-      const topY   = imgH < A4_H - MARGIN * 2 ? (A4_H - imgH) / 2 : MARGIN
+      const MARGIN = 10
+
+      // Scale to fill page width
+      const imgW = A4_W - MARGIN * 2
+      const imgH = imgW * (canvas.height / canvas.width)
+
+      // If card is taller than one page, scale to fit page height instead
+      const maxH  = A4_H - MARGIN * 2
+      const finalW = imgH > maxH ? maxH * (canvas.width / canvas.height) : imgW
+      const finalH = imgH > maxH ? maxH : imgH
 
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-      doc.addImage(canvas.toDataURL('image/png'), 'PNG', MARGIN, topY, imgW, imgH)
+      doc.addImage(canvas.toDataURL('image/png'), 'PNG', MARGIN, MARGIN, finalW, finalH)
       doc.save(`rensume-card-${theme}-${Date.now()}.pdf`)
 
     } catch (e) {
