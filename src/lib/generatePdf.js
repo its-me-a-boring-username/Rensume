@@ -77,6 +77,9 @@ const THEME_COLORS = {
   },
 }
 
+// ─── Active theme colors (set at start of downloadCardPdf) ─────────────────
+let C = {}
+
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
 const PAGE_W = 210
@@ -236,7 +239,7 @@ function makeColumn(doc, colX, startPage, reusePages) {
 export async function downloadCardPdf(profile, themeName = 'bordeaux') {
   try {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-    const C = THEME_COLORS[themeName] || THEME_COLORS.bordeaux
+    C = THEME_COLORS[themeName] || THEME_COLORS.bordeaux
 
     registerIBMPlexSans(doc)
 
