@@ -100,7 +100,7 @@ function lhFn(pt, ratio) { return pt * 0.3528 * ratio }
 
 const SP = {
   barH:           lhFn(10, 1.5),   // compact bar height
-  barToEvidence:  5,               // gap bar -> evidence
+  barToEvidence:  2.5,             // gap bar -> evidence
   evidenceLH:     lhFn(9, 1.45),  // evidence line height
   evidenceToNext: 2,               // gap after evidence block
   noEvidenceGap:  3,               // gap between items without evidence
