@@ -266,7 +266,8 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
     // ── Header ───────────────────────────────────────────────────────────────
     sf(doc, 'bold', 'normal', 11)
     const QR_TOTAL = 22 + 1.5 * 2 + 6  // QR size + padding + gap
-    const sumLines = doc.splitTextToSize(summary, PAGE_W - MARGIN * 2 - QR_TOTAL)
+    const safeSummary = summary.length > 160 ? summary.slice(0, 157) + '...' : summary
+    const sumLines = doc.splitTextToSize(safeSummary, PAGE_W - MARGIN * 2 - QR_TOTAL)
     const SUM_LH   = lh(11, 1.45)
     const PAD_T    = 5
     const PAD_M    = 4

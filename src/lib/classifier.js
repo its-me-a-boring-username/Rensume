@@ -101,7 +101,7 @@ Industry classification is based on the following NAICS sectors: ${NAICS_SECTORS
 
 Respond ONLY with valid JSON matching this exact structure:
 {
-  "summary": "one plain sentence describing what this person actually does",
+  "summary": "one plain sentence describing what this person actually does — maximum 160 characters, no exceptions",
   "total_months": 0,
   "strengths": "1-2 sentences highlighting what genuinely sets this candidate apart, referencing specific experience",
   "functions": [{"name": "Function level name", "months": 0, "evidence": "evidence text"}],
