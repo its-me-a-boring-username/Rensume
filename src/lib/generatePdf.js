@@ -292,7 +292,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
     const QR_PAD    = 2     // mm white padding inside box, same all sides
     const BOX_W     = QR_SIZE + QR_PAD * 2
     const BOX_H     = QR_SIZE + QR_PAD * 2
-    const QR_X      = PAGE_W - MARGIN - BOX_W  // right-aligned with content margin
+    const QR_X      = PAGE_W - QR_PAD - QR_SIZE - QR_PAD  // flush right, only internal padding as gap
     const QR_Y      = (HDR_H - BOX_H) / 2      // vertically centered in header
     doc.setFillColor(255, 255, 255)
     doc.rect(QR_X, QR_Y, BOX_W, BOX_H, 'F')
