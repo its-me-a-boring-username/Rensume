@@ -67,7 +67,7 @@ const STYLES = `
 
 function InjectStyles() {
   useEffect(() => {
-    const id = 'rensume-anim-styles'
+    const id = 'rensume-anim-styles-v2'
     if (!document.getElementById(id)) {
       const el = document.createElement('style')
       el.id = id

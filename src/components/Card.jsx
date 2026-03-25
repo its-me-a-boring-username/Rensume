@@ -198,10 +198,16 @@ export default function Card({ profile, theme = 'bordeaux', showEvidence = false
 
       {/* Strengths — full width under header */}
       {strengths && (
-        <div style={{ ...t.strengthsBg, padding: '9px 18px' }}>
-          <div style={{ ...t.strengthsText, fontFamily: F.body, fontSize: 9, lineHeight: 1.65 }}>
-            {strengths}
+        <div style={{ ...t.strengthsBg, padding: '8px 18px 10px' }}>
+          <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3, borderBottom: '0.5px solid rgba(0,0,0,0.1)' }}>
+            Strengths
           </div>
+          {strengths.split(/(?<=[.!?])\s+/).filter(Boolean).map((sentence, i) => (
+            <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 3 }}>
+              <span style={{ ...t.strengthsText, fontFamily: F.body, fontSize: 9, flexShrink: 0, marginTop: 1 }}>·</span>
+              <span style={{ ...t.strengthsText, fontFamily: F.body, fontSize: 9, lineHeight: 1.6 }}>{sentence.trim()}</span>
+            </div>
+          ))}
         </div>
       )}
 
@@ -214,7 +220,12 @@ export default function Card({ profile, theme = 'bordeaux', showEvidence = false
             <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
               Function Levels
             </div>
-            {functions.map((fn, i) => (
+            {[...functions].sort((a, b) => {
+              const ORDER = ['Strategic Executive', 'Strategic Advisor', 'Strategic Manager', 'People Manager', 'Process Manager', 'Process Specialist']
+              const ai = ORDER.findIndex(l => a.name.includes(l))
+              const bi = ORDER.findIndex(l => b.name.includes(l))
+              return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
+            }).map((fn, i) => (
               <BarRow
                 key={i}
                 label={getSeniorityLabel(fn.name, fn.years)}
