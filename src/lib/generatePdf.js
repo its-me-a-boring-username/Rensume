@@ -156,7 +156,7 @@ function makeColumn(doc, colX, startPage, reusePages) {
   function goToPage(p) { page = p; doc.setPage(p) }
 
   function checkPage(needed = 18) {
-    if (y + needed > FOOT_Y - 4) {
+    if (y + needed > FOOT_Y - 2) {
       drawFooter(doc)
       const next = page + 1
       if (reusePages && next <= doc.getNumberOfPages()) {
@@ -294,7 +294,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
     const BOX_W     = QR_SIZE + QR_PAD * 2
     const BOX_H     = QR_SIZE + QR_PAD * 2
     const QR_X      = PAGE_W - QR_MARGIN - BOX_W
-    const QR_Y      = QR_MARGIN
+    const QR_Y      = (HDR_H - BOX_H) / 2  // vertically centered in header
     doc.setFillColor(255, 255, 255)
     doc.rect(QR_X, QR_Y, BOX_W, BOX_H, 'F')
     doc.addImage(qrDataUrl, 'PNG', QR_X + QR_PAD, QR_Y + QR_PAD, QR_SIZE, QR_SIZE)
@@ -464,7 +464,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
 
     // 7. Credentials
     if (credentials.length) {
-      right.checkPage(14)
+      right.checkPage(10)
       let ry = right.getY()
 
       sf(doc, 'bold', 'normal', 9)
@@ -477,7 +477,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
       right.setY(ry)
 
       credentials.forEach(cred => {
-        right.checkPage(12)
+        right.checkPage(9)
         ry = right.getY()
 
         const typeLabel = (cred.type || '').toUpperCase()
