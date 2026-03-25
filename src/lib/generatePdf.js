@@ -156,7 +156,7 @@ function makeColumn(doc, colX, startPage, reusePages) {
   function goToPage(p) { page = p; doc.setPage(p) }
 
   function checkPage(needed = 18) {
-    if (y + needed > FOOT_Y - 2) {
+    if (y + needed > FOOT_Y - 1) {
       drawFooter(doc)
       const next = page + 1
       if (reusePages && next <= doc.getNumberOfPages()) {
@@ -265,7 +265,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
 
     // ── Header ───────────────────────────────────────────────────────────────
     sf(doc, 'bold', 'normal', 11)
-    const QR_TOTAL = 22 + 1.5 * 2 + 6  // QR size + padding + gap
+    const QR_TOTAL = 18 + 2 * 2 + 4    // QR size + padding + gap
     const safeSummary = summary.length > 160 ? summary.slice(0, 157) + '...' : summary
     const sumLines = doc.splitTextToSize(safeSummary, PAGE_W - MARGIN * 2 - QR_TOTAL)
     const SUM_LH   = lh(11, 1.45)
@@ -288,13 +288,12 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
     sumLines.forEach((line, i) => doc.text(line, MARGIN, sumY + i * SUM_LH))
 
     // QR code — flush to right edge of page, vertically centered in header
-    const QR_SIZE   = 22    // mm
-    const QR_PAD    = 1.5   // mm white padding inside box
-    const QR_MARGIN = 5     // mm gap from edges — same on top, right, bottom
+    const QR_SIZE   = 18    // mm — compact but scannable
+    const QR_PAD    = 2     // mm white padding inside box, same all sides
     const BOX_W     = QR_SIZE + QR_PAD * 2
     const BOX_H     = QR_SIZE + QR_PAD * 2
-    const QR_X      = PAGE_W - QR_MARGIN - BOX_W
-    const QR_Y      = (HDR_H - BOX_H) / 2  // vertically centered in header
+    const QR_X      = PAGE_W - MARGIN - BOX_W  // right-aligned with content margin
+    const QR_Y      = (HDR_H - BOX_H) / 2      // vertically centered in header
     doc.setFillColor(255, 255, 255)
     doc.rect(QR_X, QR_Y, BOX_W, BOX_H, 'F')
     doc.addImage(qrDataUrl, 'PNG', QR_X + QR_PAD, QR_Y + QR_PAD, QR_SIZE, QR_SIZE)
@@ -388,7 +387,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
     let overflowed = false
 
     for (const ka of knowledge_areas) {
-      const h = kaItemHeight(ka)
+      const h = kaItemHeight(ka) * 0.92  // slight discount — measurement tends to overestimate
       if (!overflowed && usedH + h <= leftSpace) {
         kaLeft.push(ka); usedH += h
       } else {
