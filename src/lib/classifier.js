@@ -8,7 +8,7 @@
 const NAICS_SECTORS = [
   'Agriculture', 'Mining', 'Utilities', 'Construction', 'Manufacturing',
   'Wholesale Trade', 'Retail Sales', 'Transportation and Warehousing',
-  'Information & Technology', 'Fintech, Banking & Finance','Insurance', 'Real Estate',
+  'Information & Technology', 'Fintech, Banking & Finance', 'Insurance', 'Real Estate',
   'Professional and Technical Services', 'Management of Companies',
   'Administrative and Support Services', 'Educational Services',
   'Health Care and Social Assistance', 'Arts and Entertainment',
@@ -118,7 +118,8 @@ Strategic Executive - Decides what should happen. Binding authority
 Classification handled in a separate call using SOC 2018 minor group names. See buildKnowledgeAreaSystem in classifier.js
 
 //Industry//
-Industry classification is based on the following NAICS sectors: ${NAICS_SECTORS.join(', ')}
+Industry classification is based on the following NAICS sectors (use the exact name as listed):
+${NAICS_SECTORS.map((s, i) => (i + 1) + '. ' + s).join('\n')}
 
 Respond ONLY with valid JSON matching this exact structure:
 {
@@ -146,7 +147,8 @@ Extract Knowledge Area / Discipline using SOC 2018 minor group names.
 - The candidate has ${totalMonths} total professional months for context when estimating time in each area.
 
 Use only these SOC 2018 minor group names:
-${SOC_MINOR_GROUPS.join(', ')}
+Use only these SOC 2018 minor group names (use the exact name as listed):
+${SOC_MINOR_GROUPS.map((s, i) => (i + 1) + '. ' + s).join('\n')}
 
 Respond ONLY with valid JSON:
 {"knowledge_areas": [{"name": "", "months": 0, "evidence": ""}]}`
