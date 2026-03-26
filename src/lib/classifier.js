@@ -8,7 +8,7 @@
 const NAICS_SECTORS = [
   'Agriculture', 'Mining', 'Utilities', 'Construction', 'Manufacturing',
   'Wholesale Trade', 'Retail Sales', 'Transportation and Warehousing',
-  'Information & Technology', 'Fintech, Banking & Finance,'Insurance', 'Real Estate',
+  'Information & Technology', 'Fintech, Banking & Finance','Insurance', 'Real Estate',
   'Professional and Technical Services', 'Management of Companies',
   'Administrative and Support Services', 'Educational Services',
   'Health Care and Social Assistance', 'Arts and Entertainment',
