@@ -27,6 +27,7 @@ const SOC_MINOR_GROUPS = [
 'Business Operations',
 'Construction',
 'Counseling, Social Work, and Community Service',
+'Data Analysis & Reporting',
 'Drafting and Architectural Engineering',
 'Electrical and Electronic Equipment Repair',
 'Engineering',
@@ -43,7 +44,7 @@ const SOC_MINOR_GROUPS = [
 'Home Health and Personal Care',
 'Information and Record Keeping',
 'Installation Maintenance and Repair',
-'Law',
+'Law & Litigation',
 'Law Enforcement',
 'Legal Support',
 'Library Curation and Archival Work',
@@ -67,6 +68,7 @@ const SOC_MINOR_GROUPS = [
 'Plant and System Operators',
 'Postsecondary Education',
 'Primary and Secondary Education',
+'Quality Assessment & Management',
 'Rail Transportation',
 'Religious Work',
 'Retail Sales',
@@ -75,7 +77,7 @@ const SOC_MINOR_GROUPS = [
 'Secretarial and Administrative Work',
 'Social Scientists and Related Work',
 'Vehicle and Mobile Equipment Mechanics',
-'Water Transportation']
+'Water Transportation',]
 
 // ─── Prompts ──────────────────────────────────────────────────────────────────
 
