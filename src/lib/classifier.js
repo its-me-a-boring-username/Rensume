@@ -146,7 +146,6 @@ Extract Knowledge Area / Discipline using SOC 2018 minor group names.
 - Knowledge area months do NOT need to sum to total_months. A role can draw on multiple knowledge areas simultaneously.
 - The candidate has ${totalMonths} total professional months for context when estimating time in each area.
 
-Use only these SOC 2018 minor group names:
 Use only these SOC 2018 minor group names (use the exact name as listed):
 ${SOC_MINOR_GROUPS.map((s, i) => (i + 1) + '. ' + s).join('\n')}
 

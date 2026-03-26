@@ -114,23 +114,29 @@ function InputContent({ resumeText, setResumeText, error, setError, loading, loa
   return (
     <>
       <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#904060', marginBottom: 8 }}>Generate your card</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1410', marginBottom: 6 }}>Paste your resume</div>
-      <p style={{ fontSize: 11.5, color: '#706050', lineHeight: 1.7, marginBottom: 20 }}>Plain text works best. Include your full work history for the most accurate profile.</p>
+      <div style={{ fontSize: 24, fontWeight: 700, color: '#1a1410', marginBottom: 8 }}>Paste your resume</div>
+      <p style={{ fontSize: 13, color: '#706050', lineHeight: 1.7, marginBottom: 10 }}>Plain text works best. Include your full work history for the most accurate profile.</p>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', background: '#f0ece4', border: '0.5px solid #d8d0c4', borderRadius: 4, padding: '10px 12px', marginBottom: 20 }}>
+        <span style={{ color: '#904060', fontSize: 13, flexShrink: 0, marginTop: 1 }}>💡</span>
+        <p style={{ fontSize: 12, color: '#706050', lineHeight: 1.65, margin: 0 }}>
+          You'll get the most accurate results if you exclude information not relevant to your work history — like contact details, hobbies, and general skills.
+        </p>
+      </div>
       <textarea
         value={resumeText}
         onChange={e => { setResumeText(e.target.value); setError('') }}
         placeholder="Paste your resume text here..."
         disabled={loading}
-        style={{ width: '100%', height: 260, background: loading ? '#f5f1eb' : 'white', border: error ? '1px solid #c04060' : '1px solid #d8d0c4', borderRadius: 6, padding: '14px 16px', fontSize: 11, color: '#1a1410', lineHeight: 1.75, resize: 'none', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', transition: 'background 0.2s ease, border-color 0.15s ease' }}
+        style={{ width: '100%', height: 260, background: loading ? '#f5f1eb' : 'white', border: error ? '1px solid #c04060' : '1px solid #d8d0c4', borderRadius: 6, padding: '14px 16px', fontSize: 13, color: '#1a1410', lineHeight: 1.75, resize: 'none', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', transition: 'background 0.2s ease, border-color 0.15s ease' }}
         onFocus={e => { if (!loading) e.target.style.borderColor = '#904060' }}
         onBlur={e => e.target.style.borderColor = error ? '#c04060' : '#d8d0c4'}
       />
-      {error && <p style={{ fontSize: 10, color: '#c04060', marginTop: 6 }}>{error}</p>}
-      <p style={{ fontSize: 10, color: '#a09080', margin: '8px 0 20px' }}>Your resume is never stored without your permission.</p>
+      {error && <p style={{ fontSize: 11, color: '#c04060', marginTop: 6 }}>{error}</p>}
+      <p style={{ fontSize: 11, color: '#a09080', margin: '8px 0 20px' }}>Your resume is never stored without your permission.</p>
       <button
         onClick={handleGenerate}
         disabled={loading}
-        style={{ display: 'block', width: '100%', background: loading ? '#b07080' : '#904060', color: '#fff', fontSize: 11, fontWeight: 700, padding: '12px 22px', borderRadius: 3, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', transition: 'background 0.2s ease' }}
+        style={{ display: 'block', width: '100%', background: loading ? '#b07080' : '#904060', color: '#fff', fontSize: 13, fontWeight: 700, padding: '12px 22px', borderRadius: 3, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', transition: 'background 0.2s ease' }}
       >
         {loading ? 'Classifying...' : 'Generate my card →'}
       </button>
