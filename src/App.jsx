@@ -25,9 +25,9 @@ function AdminShell({ children }) {
   )
 }
 
-// Protects admin routes — shows login if no session, loading spinner if resolving
+// Protects admin routes — shows login if no session, null if still resolving
 function AdminRoute({ session, children }) {
-  if (session === undefined) return null // still resolving — avoids flash
+  if (session === undefined) return null
   if (!session) return <ResearchLogin />
   return children
 }
@@ -48,9 +48,8 @@ export default function App() {
         <Route path="/" element={<GeneratePage />} />
 
         {/* Admin — auth required */}
-        <Route path="/admin" element={<Navigate to="/admin/run" replace />} />
         <Route
-          path="/admin/run"
+          path="/admin"
           element={
             <AdminRoute session={session}>
               <AdminShell><ResearchRunAnalysis /></AdminShell>
