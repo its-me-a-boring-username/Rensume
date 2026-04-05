@@ -3,85 +3,12 @@
 // Makes two API calls — shared dimensions first, then SOC Minor knowledge areas.
 // Both calls go through the Vercel /api/chat proxy to keep the API key off the client.
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const NAICS_SECTORS = [
-  'Agriculture', 'Mining', 'Utilities', 'Construction', 'Manufacturing',
-  'Wholesale Trade', 'Retail Sales', 'Transportation and Warehousing',
-  'Information & Technology', 'Fintech, Banking & Finance', 'Insurance', 'Real Estate',
-  'Professional and Technical Services', 'Management of Companies',
-  'Administrative and Support Services', 'Educational Services',
-  'Health Care and Social Assistance', 'Arts and Entertainment',
-  'Accommodation and Food Services', 'Government',
-  'Nonprofit and Social Services', 'Other',
-]
-
-const SOC_MINOR_GROUPS = [
-  'Adult Education & Training',
-'Agricultural Work',
-'Air Transportation',
-'Animal Care and Service',
-'Architectural Surveying and Cartography',
-'Art and Design',
-'Assembling and Fabrication',
-'Business Operations',
-'Construction',
-'Counseling, Social Work, and Community Service',
-'Data Analysis & Reporting',
-'Drafting and Architectural Engineering',
-'Electrical and Electronic Equipment Repair',
-'Engineering',
-'Entertainment and Live Performances',
-'Extraction',
-'Financial Clerks',
-'Financial Services & Compliance',
-'Firefighting and Prevention',
-'Food Preparation and Serving',
-'Food Processing',
-'Forest Conservation and Logging',
-'Health Diagnosis & Treatment',
-'Health Technology',
-'Home Health and Personal Care',
-'Information and Record Keeping',
-'Installation Maintenance and Repair',
-'Law & Litigation',
-'Law Enforcement',
-'Legal Support',
-'Library Curation and Archival Work',
-'Life Sciences',
-'Material Moving',
-'Mathematical Science',
-'Media and Communication',
-'Media and Communication Equipment',
-'Metal and Plastic Fabrication',
-'Motor Vehicle Operation',
-'Occupational and Physical Therapy',
-'Occupational Health and Safety',
-'Office and Administrative Support',
-'Other Healthcare Support',
-'Other Personal Care and Service',
-'Other Production Work',
-'Other Protective Service Work',
-'Other Sales Work',
-'Personal Appearance ',
-'Physical Scientists',
-'Plant and System Operators',
-'Postsecondary Education',
-'Primary and Secondary Education',
-'Quality Assessment & Management',
-'Rail Transportation',
-'Religious Work',
-'Retail Sales',
-'Sales - General Services',
-'Sales - Wholesale and Manufacturing ',
-'Secretarial and Administrative Work',
-'Social Scientists and Related Work',
-'Vehicle and Mobile Equipment Mechanics',
-'Water Transportation',]
+import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels } from './taxonomy.js'
 
 // ─── Prompts ──────────────────────────────────────────────────────────────────
 
-const SHARED_SYSTEM = `///TASK DESCRIPTION///
+function buildSharedSystem(functionLevels, industries) {
+  return `///TASK DESCRIPTION///
 You are a resume taxonomy classifier for Rensume, a recruiting platform that helps recruiters understand the strengths and competencies of candidates who've had non-linear careers.
 
 Extract all dimensions and respond ONLY with valid JSON, no markdown, no preamble, no backticks.
@@ -109,19 +36,14 @@ For industry evidence:
 CRITICAL for function evidence: The evidence must justify WHY this specific function level applies.
 CRITICAL for function classification: Function levels are independent and mutually exclusive in what they describe. Do NOT infer a higher function level by combining evidence from two lower levels. Each function level must be justified by its own direct evidence. If a candidate shows both People Manager work and Strategic Advisor work, credit both separately — do not upgrade either to Strategic Manager. Do NOT suppress a valid lower-level function tag because a higher one is also present.
 Function levels list:
-Process Specialist - Executes defined processes
-Process Manager - Improves and manages processes
-People Manager - Manages a team of individual contributors who execute defined processes
-Strategic Manager - Manages multiple teams or managers executing strategy-linked initiatives
-Strategic Advisor - Recommends what should happen. No binding authority
-Strategic Executive - Decides what should happen. Binding authority
+${formatFunctionLevels(functionLevels)}
 
 //knowledge areas//
-Classification handled in a separate call using SOC 2018 minor group names. See buildKnowledgeAreaSystem in classifier.js
+Classification handled in a separate call. See buildKnowledgeAreaSystem in classifier.js
 
 //Industry//
 Industry classification is based on the following NAICS sectors (use the exact name as listed):
-${NAICS_SECTORS.map((s, i) => (i + 1) + '. ' + s).join('\n')}
+${formatIndustryList(industries)}
 
 Respond ONLY with valid JSON matching this exact structure:
 {
@@ -133,8 +55,9 @@ Respond ONLY with valid JSON matching this exact structure:
   "tools": ["tool or method name"],
   "credentials": [{"type": "Degree|Certification|License", "name": "", "institution": "", "year": ""}]
 }`
+}
 
-function buildKnowledgeAreaSystem(totalMonths) {
+function buildKnowledgeAreaSystem(knowledgeAreas, totalMonths) {
   return `///TASK DESCRIPTION///
 You are a resume taxonomy classifier for Rensume, a recruiting platform that helps recruiters understand the strengths and competencies of candidates who've had non-linear careers.
 
@@ -149,7 +72,7 @@ Extract Knowledge Area / Discipline using SOC 2018 minor group names.
 - The candidate has ${totalMonths} total professional months for context when estimating time in each area.
 
 Use only these SOC 2018 minor group names (use the exact name as listed):
-${SOC_MINOR_GROUPS.map((s, i) => (i + 1) + '. ' + s).join('\n')}
+${formatKAList(knowledgeAreas)}
 
 Respond ONLY with valid JSON:
 {"knowledge_areas": [{"name": "", "months": 0, "evidence": ""}]}`
@@ -228,9 +151,9 @@ async function callAPI(system, userContent) {
 /**
  * Classify a resume text using the Rensume taxonomy.
  *
- * Makes two API calls:
+ * Fetches live taxonomy from Supabase, then makes two API calls:
  *   1. Shared dimensions (summary, functions, industries, tools, credentials, strengths)
- *   2. Knowledge areas (SOC Minor Groups)
+ *   2. Knowledge areas
  *
  * Returns a profile object ready to be stored in the `cards` table.
  *
@@ -243,22 +166,26 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
     throw new Error('No resume text provided.')
   }
 
+  // Fetch live taxonomy from Supabase (cached within session)
+  onProgress('Loading taxonomy...')
+  const { knowledgeAreas, functionLevels, industries } = await fetchTaxonomy()
+
   const prompt = 'Classify this resume:\n\n' + resumeText
 
   // Call 1 — shared dimensions
   onProgress('Extracting your profile...')
-  const shared = await callAPI(SHARED_SYSTEM, prompt)
+  const shared = await callAPI(buildSharedSystem(functionLevels, industries), prompt)
   const totalMonths = Number(shared.total_months) || 0
   const totalYears  = monthsToYears(totalMonths)
 
   // Call 2 — knowledge areas
   onProgress('Classifying knowledge areas...')
-  const kaResult = await callAPI(buildKnowledgeAreaSystem(totalMonths), prompt)
+  const kaResult = await callAPI(buildKnowledgeAreaSystem(knowledgeAreas, totalMonths), prompt)
 
   // Convert months to display years
   shared.industries    = convertMonthsToYears(shared.industries)
   shared.functions     = convertMonthsToYears(shared.functions)
-  const knowledgeAreas = convertMonthsToYears(kaResult.knowledge_areas)
+  const knowledgeAreasResult = convertMonthsToYears(kaResult.knowledge_areas)
 
   // Return a profile shaped to match the `cards` table schema
   return {
@@ -267,7 +194,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
     total_years:     totalYears,
     total_months:    totalMonths,
     functions:       shared.functions      || [],
-    knowledge_areas: knowledgeAreas        || [],
+    knowledge_areas: knowledgeAreasResult  || [],
     industries:      shared.industries     || [],
     tools:           shared.tools          || [],
     credentials:     shared.credentials    || [],
