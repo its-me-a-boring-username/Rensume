@@ -15,7 +15,7 @@ console.log('SUPABASE_URL:', SUPABASE_URL)
 console.log('SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY)
 
 async function fetchTable(table, select = '*', order = 'display_order') {
-  console.log('Fetching:', url)
+  console.log('Fetching:', table)
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/${table}?select=${select}&order=${order}&active=eq.true`,
     {
