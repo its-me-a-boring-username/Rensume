@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase.js"
 
 const LINKS = [
   { label: 'Resumes', path: '/admin/resumes' },
-  { label: 'Run',     path: '/admin/run'     },
+  { label: 'Run',     path: '/admin'         },
   { label: 'Results', path: '/admin/results' },
 ]
 
