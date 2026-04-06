@@ -1,4 +1,3 @@
-// test push 2
 // src/App.jsx
 // Root component and router.
 // Public routes: /
@@ -14,8 +13,10 @@ import ResearchRunAnalysis from "./pages/admin/ResearchRunAnalysis.jsx"
 import ResearchResumeLibrary from "./pages/admin/ResearchResumeLibrary.jsx"
 import ResearchResultsHistory from "./pages/admin/ResearchResultsHistory.jsx"
 
-// Wraps all admin pages with the nav bar and padding
+console.log('[App] module loaded')
+
 function AdminShell({ children }) {
+  console.log('[AdminShell] rendering')
   return (
     <div style={{ minHeight: '100vh' }}>
       <ResearchNav />
@@ -26,19 +27,35 @@ function AdminShell({ children }) {
   )
 }
 
-// Protects admin routes — shows login if no session, null if still resolving
 function AdminRoute({ session, children }) {
-  if (session === undefined) return null
-  if (!session) return <ResearchLogin />
+  console.log('[AdminRoute] session:', session)
+  if (session === undefined) {
+    console.log('[AdminRoute] session undefined — returning null')
+    return null
+  }
+  if (!session) {
+    console.log('[AdminRoute] no session — showing login')
+    return <ResearchLogin />
+  }
+  console.log('[AdminRoute] session found — rendering children')
   return children
 }
 
 export default function App() {
   const [session, setSession] = useState(undefined)
 
+  console.log('[App] rendering, session:', session)
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session))
+    console.log('[App] useEffect running')
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[App] getSession resolved:', session)
+      setSession(session)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('[App] onAuthStateChange:', session)
+      setSession(session)
+    })
     return () => subscription.unsubscribe()
   }, [])
 
