@@ -5,7 +5,7 @@
 //   - evidence_instructions
 //   - extract_prompt
 //   - function_level_definitions
-// Each has 6 placeholder options to be populated and migrated to Supabase later.
+// Each bank has 10 slots. Placeholders are greyed out in the UI.
 
 // ─── Models ───────────────────────────────────────────────────────────────────
 
@@ -29,18 +29,22 @@ export const ALL_FN_NAMES = [
   'Strategic Advisor', 'Strategic Manager', 'Strategic Executive', 'Chief Executive',
 ]
 
-// ─── Component banks ──────────────────────────────────────────────────────────
-// Four banks, each with 6 independently selectable options.
-// Any combination is valid. The classifier assembles them at runtime.
-// To be seeded into Supabase and fetched at runtime in a future iteration.
+// ─── Placeholder helper ───────────────────────────────────────────────────────
 
-// ── Classification rules ──────────────────────────────────────────────────────
+const placeholder = (n) => ({
+  key:         `placeholder_v${n}`,
+  name:        `v${n} — Placeholder`,
+  description: 'To be defined.',
+  content:     'PLACEHOLDER — replace with content before use',
+})
+
+// ─── Classification rules — 10 slots ─────────────────────────────────────────
 
 export const CLASSIFICATION_RULES = [
   {
     key:         'rules_v1_standard',
-    name:        'Rules v1 — Standard',
-    description: 'Current baseline rules.',
+    name:        'v1 — Standard',
+    description: 'Baseline rules.',
     content: `- Apply only labels supported by the work described in that role — do not infer from title
 - Function levels are independent — a role can have multiple labels simultaneously
 - Do not suppress lower levels when higher ones are present
@@ -48,7 +52,7 @@ export const CLASSIFICATION_RULES = [
   },
   {
     key:         'rules_v2_strict',
-    name:        'Rules v2 — Strict',
+    name:        'v2 — Strict',
     description: 'No guessing. No combining evidence across bullet points. Omit rather than infer.',
     content: `- Apply only labels supported by the work described in that role — do not infer from title
 - Function levels are independent — a role can have multiple labels simultaneously
@@ -58,79 +62,90 @@ export const CLASSIFICATION_RULES = [
 - Review each evidence field for accuracy before responding`,
   },
   {
-    key:         'rules_v3_placeholder',
-    name:        'Rules v3 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
+    key:         'rules_v3_concise',
+    name:        'v3 — Concise',
+    description: 'Simplified version of standard. Shorter phrasing, fewer rules.',
+    content: `- Apply only labels supported by the work described in a role
+- A role can have multiple function levels simultaneously
+- Do not assign a label if you cannot find direct, unambiguous evidence
+- Review each evidence field for accuracy before responding`,
   },
-  {
-    key:         'rules_v4_placeholder',
-    name:        'Rules v4 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
-  },
-  {
-    key:         'rules_v5_placeholder',
-    name:        'Rules v5 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
-  },
-  {
-    key:         'rules_v6_placeholder',
-    name:        'Rules v6 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
-  },
+  placeholder(4),
+  placeholder(5),
+  placeholder(6),
+  placeholder(7),
+  placeholder(8),
+  placeholder(9),
+  placeholder(10),
 ]
 
-// ── Evidence instructions ─────────────────────────────────────────────────────
+// ─── Evidence instructions — 10 slots ────────────────────────────────────────
 
 export const EVIDENCE_INSTRUCTIONS = [
   {
     key:         'evidence_v1_strict',
-    name:        'Evidence v1 — Strict (verbatim)',
+    name:        'v1 — Strict (verbatim)',
     description: 'Exact words from the resume only. No paraphrase.',
-    content:     `Evidence must be a verbatim quote from the role text — copy the exact words. Use single quotes inside evidence strings. Do not paraphrase or synthesise.`,
+    content:     `Evidence must be a verbatim quote from the resume text. Use single quotes inside evidence strings. Do not paraphrase or synthesise.`,
   },
   {
     key:         'evidence_v2_moderate',
-    name:        'Evidence v2 — Moderate (paraphrase ok)',
-    description: 'Direct quote or close paraphrase. Meaning must be preserved exactly.',
-    content:     `Evidence should be a direct quote or close paraphrase from the role text. Minor rewording is acceptable but the meaning must be preserved exactly. Use single quotes inside evidence strings.`,
+    name:        'v2 — Moderate (paraphrase ok)',
+    description: 'Direct quote or close paraphrase. Original meaning must be preserved.',
+    content:     `Evidence should be a direct quote or close paraphrase from the role text. Minor rewording is acceptable but the original meaning must be preserved. Use single quotes inside evidence strings.`,
   },
   {
     key:         'evidence_v3_loose',
-    name:        'Evidence v3 — Loose (synthesis ok)',
+    name:        'v3 — Loose (synthesis ok)',
     description: 'Quote, paraphrase, or synthesis. Capture the substance of the work.',
-    content:     `Evidence may be a quote, paraphrase, or synthesis of the role text. Capture the substance of the work performed rather than exact wording. Use single quotes inside evidence strings.`,
+    content:     `Evidence may be a quote, paraphrase, or synthesis of the role text. Capture the substance of the work performed. Use single quotes inside evidence strings.`,
   },
   {
-    key:         'evidence_v4_placeholder',
-    name:        'Evidence v4 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
+    key:         'evidence_v4_strict_concise',
+    name:        'v4 — Strict-Concise (verbatim)',
+    description: 'Verbatim only. Shorter instruction than v1.',
+    content:     `Evidence must be a verbatim quote from the resume text. Use single quotes inside evidence strings.`,
   },
   {
-    key:         'evidence_v5_placeholder',
-    name:        'Evidence v5 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
+    key:         'evidence_v5_moderate_concise',
+    name:        'v5 — Moderate-Concise (paraphrase ok)',
+    description: 'Paraphrase ok. Shorter instruction than v2.',
+    content:     `Evidence should be a direct quote or close paraphrase. Original meaning must be preserved. Use single quotes inside evidence strings.`,
   },
   {
-    key:         'evidence_v6_placeholder',
-    name:        'Evidence v6 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
+    key:         'evidence_v6_loose_concise',
+    name:        'v6 — Loose-Concise (synthesis ok)',
+    description: 'Synthesis ok. Shorter instruction than v3.',
+    content:     `Evidence may be a quote, paraphrase, or synthesis of the role text. Use single quotes inside evidence strings.`,
   },
+  {
+    key:         'evidence_v7_rich_all',
+    name:        'v7 — Rich (All Sources)',
+    description: 'Moderate + use high quality evidence from all roles that support a label.',
+    content:     `Evidence should be a direct quote or close paraphrase from the role text. Minor rewording is acceptable but the original meaning must be preserved. Use high quality evidence from all roles that support a label. Use single quotes inside evidence strings.`,
+  },
+  {
+    key:         'evidence_v8_rich_mixed',
+    name:        'v8 — Rich (Mixed Sources)',
+    description: 'Moderate + use evidence from different roles that support a label.',
+    content:     `Evidence should be a direct quote or close paraphrase from the role text. Minor rewording is acceptable but the original meaning must be preserved. Use high quality evidence from different roles that support a label. Use single quotes inside evidence strings.`,
+  },
+  {
+    key:         'evidence_v9_rich_best',
+    name:        'v9 — Rich (Best Sources)',
+    description: 'Moderate + use the best and most relevant evidence from different roles.',
+    content:     `Evidence should be a direct quote or close paraphrase from the role text. Minor rewording is acceptable but the original meaning must be preserved. Use the best and most relevant evidence from different roles that support a label. Use single quotes inside evidence strings.`,
+  },
+  placeholder(10),
 ]
 
-// ── Extract prompts ───────────────────────────────────────────────────────────
+// ─── Extract prompts — 10 slots ───────────────────────────────────────────────
 
 export const EXTRACT_PROMPTS = [
   {
     key:         'extract_v1_standard',
-    name:        'Extract v1 — Standard',
-    description: 'Current baseline extraction prompt.',
+    name:        'v1 — Standard',
+    description: 'Baseline extraction prompt with rules.',
     content: `You are a resume parser. Extract every role from this resume and return a JSON array. Return ONLY valid JSON with no markdown, no preamble, no backticks.
 
 For each role return:
@@ -148,44 +163,37 @@ Rules:
 Respond ONLY with: [{"title":"","employer":"","start_raw":"","end_raw":"","text":""}]`,
   },
   {
-    key:         'extract_v2_placeholder',
-    name:        'Extract v2 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
+    key:         'extract_v2_no_rules',
+    name:        'v2 — No Rules',
+    description: 'Same structure as v1 but without the Rules section.',
+    content: `You are a resume parser. Extract every role from this resume and return a JSON array. Return ONLY valid JSON with no markdown, no preamble, no backticks.
+
+For each role return:
+- title: job title as written
+- employer: company name
+- start_raw: start date exactly as written, or null if absent
+- end_raw: end date exactly as written, or null if absent
+- text: full role description text including all bullet points
+
+Respond ONLY with: [{"title":"","employer":"","start_raw":"","end_raw":"","text":""}]`,
   },
-  {
-    key:         'extract_v3_placeholder',
-    name:        'Extract v3 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
-  },
-  {
-    key:         'extract_v4_placeholder',
-    name:        'Extract v4 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
-  },
-  {
-    key:         'extract_v5_placeholder',
-    name:        'Extract v5 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
-  },
-  {
-    key:         'extract_v6_placeholder',
-    name:        'Extract v6 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
-  },
+  placeholder(3),
+  placeholder(4),
+  placeholder(5),
+  placeholder(6),
+  placeholder(7),
+  placeholder(8),
+  placeholder(9),
+  placeholder(10),
 ]
 
-// ── Function level definitions ────────────────────────────────────────────────
+// ─── Function level definitions — 10 slots ───────────────────────────────────
 
 export const FN_DEFINITIONS = [
   {
-    key:         'fn_v1_current',
-    name:        'Definitions v1 — Current',
-    description: 'Locked definitions matching taxonomy_function_levels in Supabase.',
+    key:         'fn_v1_rich_current',
+    name:        'v1 — Rich (Live & Current)',
+    description: 'Full definitions matching taxonomy_function_levels in Supabase.',
     content: `Processing Specialist - Executes clearly defined processes created by someone else. Routine work that may include a wide range of tasks
 Process Manager - Defines the work. Translates policy into actionable processes. Manages and modifies existing processes
 People Manager - Manages people who execute defined processes
@@ -195,35 +203,36 @@ Strategic Executive - Sets initiatives and determines priority within a defined 
 Chief Executive - Accountable for organizational performance as a whole. Sets the vision and strategic direction within which Strategic Executives operate`,
   },
   {
-    key:         'fn_v2_placeholder',
-    name:        'Definitions v2 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
+    key:         'fn_v2_label_only',
+    name:        'v2 — Label Only',
+    description: 'Label names only. No definitions. Tests whether the model uses its own understanding.',
+    content: `Processing Specialist
+Process Manager
+People Manager
+Strategic Advisor
+Strategic Manager
+Strategic Executive
+Chief Executive`,
   },
   {
-    key:         'fn_v3_placeholder',
-    name:        'Definitions v3 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
+    key:         'fn_v3_simple',
+    name:        'v3 — Simple (Original Definitions)',
+    description: 'Shorter, simpler definitions from the original taxonomy.',
+    content: `Processing Specialist - Executes defined processes
+Process Manager - Improves and manages processes
+People Manager - Manages a team of individual contributors
+Strategic Advisor - Recommends what should happen. No binding authority
+Strategic Manager - Manages multiple teams executing strategy-linked initiatives
+Strategic Executive - Decides what should happen. Binding authority
+Chief Executive - Accountable for organizational performance as a whole. Sets the vision and strategic direction`,
   },
-  {
-    key:         'fn_v4_placeholder',
-    name:        'Definitions v4 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
-  },
-  {
-    key:         'fn_v5_placeholder',
-    name:        'Definitions v5 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
-  },
-  {
-    key:         'fn_v6_placeholder',
-    name:        'Definitions v6 — Placeholder',
-    description: 'To be defined.',
-    content:     'PLACEHOLDER — replace with content before use',
-  },
+  placeholder(4),
+  placeholder(5),
+  placeholder(6),
+  placeholder(7),
+  placeholder(8),
+  placeholder(9),
+  placeholder(10),
 ]
 
 // ─── Default selections ───────────────────────────────────────────────────────
@@ -334,7 +343,7 @@ export function processRole(role) {
 // ─── API ──────────────────────────────────────────────────────────────────────
 
 export async function callAPI(system, content, model) {
-  const res = await fetch('/api/anthropic/v1/messages', {
+  const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, max_tokens: 4000, system, messages: [{ role: 'user', content }] }),
