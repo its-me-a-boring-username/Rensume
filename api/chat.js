@@ -5,11 +5,22 @@
 export const config = { runtime: 'edge' }
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
-const ALLOWED_MODEL  = 'claude-sonnet-4-20250514'
 const MAX_TOKENS_CAP = 4000
 
+const ALLOWED_MODELS = new Set([
+  'claude-opus-4-6',
+  'claude-opus-4-5',
+  'claude-sonnet-4-6',
+  'claude-sonnet-4-5-20251001',
+  'claude-sonnet-4-20250514',
+  'claude-haiku-4-5-20251001',
+  'claude-haiku-3-5-20241022',
+  'claude-haiku-3-20240307',
+])
+
+const DEFAULT_MODEL = 'claude-sonnet-4-20250514'
+
 export default async function handler(req) {
-  // Only POST allowed
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
@@ -17,7 +28,6 @@ export default async function handler(req) {
     })
   }
 
-  // CORS — tighten to your domain in production
   const origin = req.headers.get('origin') || ''
   const corsHeaders = {
     'Access-Control-Allow-Origin': process.env.ALLOWED_ORIGIN || origin,
@@ -35,9 +45,8 @@ export default async function handler(req) {
     })
   }
 
-  const { system, messages, max_tokens } = body
+  const { system, messages, max_tokens, model } = body
 
-  // Validate required fields
   if (!system || !messages || !Array.isArray(messages)) {
     return new Response(JSON.stringify({ error: 'Missing required fields: system, messages' }), {
       status: 400,
@@ -45,7 +54,9 @@ export default async function handler(req) {
     })
   }
 
-  // Cap max_tokens to prevent runaway costs
+  // Use requested model if in whitelist, otherwise fall back to default
+  const resolvedModel = ALLOWED_MODELS.has(model) ? model : DEFAULT_MODEL
+
   const tokens = Math.min(Number(max_tokens) || 2000, MAX_TOKENS_CAP)
 
   try {
@@ -57,7 +68,7 @@ export default async function handler(req) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: ALLOWED_MODEL,
+        model: resolvedModel,
         max_tokens: tokens,
         temperature: 0,
         system,
