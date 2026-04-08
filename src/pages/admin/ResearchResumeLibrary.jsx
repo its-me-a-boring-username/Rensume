@@ -7,12 +7,17 @@
 import { useState, useEffect, useRef } from "react"
 import { supabase } from "../../lib/supabase.js"
 import { EXTRACT_PROMPTS, ALL_FN_NAMES, processRole } from "../../lib/researchClassifier.js"
+import * as pdfjsLib from "pdfjs-dist"
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker?url"
 
-const EXTRACT_PROMPT = EXTRACT_PROMPTS[0] // always use v1 Standard for library parsing
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
+
+const EXTRACT_PROMPT = EXTRACT_PROMPTS[0]
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const label9 = { fontSize: 9, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: '#a09080' }
+
 const btn = (active) => ({
   padding: '4px 10px', fontSize: 11, borderRadius: 3, cursor: 'pointer',
   border: `1px solid ${active ? '#904060' : '#d8d0c4'}`,
@@ -20,6 +25,7 @@ const btn = (active) => ({
   color: active ? '#904060' : '#706050',
   fontWeight: active ? 700 : 400,
 })
+
 const primaryBtn = (disabled) => ({
   background: disabled ? '#e0dbd4' : '#904060',
   color: disabled ? '#a09080' : '#fff',
@@ -27,6 +33,7 @@ const primaryBtn = (disabled) => ({
   borderRadius: 3, border: 'none',
   cursor: disabled ? 'not-allowed' : 'pointer',
 })
+
 const ghostBtn = {
   background: 'none', border: '1px solid #d8d0c4', fontSize: 11,
   padding: '6px 14px', borderRadius: 3, cursor: 'pointer', color: '#706050',
@@ -64,7 +71,7 @@ function TagInput({ tags, onChange, allTags }) {
         {tags.map(tag => (
           <span key={tag} style={{ background: '#f5eaee', border: '1px solid #e8d0d8', borderRadius: 3, padding: '2px 8px', fontSize: 11, color: '#904060', display: 'flex', alignItems: 'center', gap: 4 }}>
             {tag}
-            <span onClick={() => removeTag(tag)} style={{ cursor: 'pointer', fontWeight: 700, fontSize: 13, lineHeight: 1 }}>×</span>
+            <span onClick={() => removeTag(tag)} style={{ cursor: 'pointer', fontWeight: 700, fontSize: 13, lineHeight: 1 }}>x</span>
           </span>
         ))}
         <input
@@ -81,7 +88,10 @@ function TagInput({ tags, onChange, allTags }) {
       {suggestions.length > 0 && (
         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #d8d0c4', borderRadius: 6, zIndex: 10, marginTop: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
           {suggestions.map(s => (
-            <div key={s} onClick={() => addTag(s)} style={{ padding: '8px 12px', fontSize: 11, cursor: 'pointer', color: '#1a1410' }}
+            <div
+              key={s}
+              onClick={() => addTag(s)}
+              style={{ padding: '8px 12px', fontSize: 11, cursor: 'pointer', color: '#1a1410' }}
               onMouseEnter={e => e.target.style.background = '#faf8f5'}
               onMouseLeave={e => e.target.style.background = 'white'}
             >{s}</div>
@@ -95,6 +105,7 @@ function TagInput({ tags, onChange, allTags }) {
 // ─── Calibration dot grid ─────────────────────────────────────────────────────
 
 function CalibrationGrid({ roles, calibration, onChange, readOnly }) {
+  const [expandedRole, setExpandedRole] = useState(null)
   const visibleRoles = roles.filter(r => !r.flagged)
 
   const toggle = (roleIdx, fn) => {
@@ -114,54 +125,77 @@ function CalibrationGrid({ roles, calibration, onChange, readOnly }) {
   const tdStyle = { padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #ede8e2', verticalAlign: 'middle' }
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ borderCollapse: 'collapse', border: '1px solid #ede8e2', borderRadius: 6, overflow: 'hidden', minWidth: '100%' }}>
-        <thead>
-          <tr>
-            <th style={{ ...thStyle, minWidth: 180 }}>Role</th>
-            <th style={{ ...thStyle, minWidth: 40 }}>Mo</th>
-            {ALL_FN_NAMES.map(fn => (
-              <th key={fn} style={{ ...thStyle, minWidth: 90 }}>
-                {fn.replace('Processing ', 'Proc. ').replace('Strategic ', 'Strat. ')}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {visibleRoles.map((role, i) => {
-            const roleIdx = roles.indexOf(role)
-            const selected = calibration[roleIdx] || []
-            return (
-              <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#faf8f5' }}>
-                <td style={tdStyle}>
-                  <div style={{ fontWeight: 700, fontSize: 11 }}>{role.title}</div>
-                  <div style={{ color: '#a09080', fontSize: 10 }}>{role.employer}</div>
-                </td>
-                <td style={{ ...tdStyle, color: '#a09080', fontSize: 10 }}>{role.months}</td>
-                {ALL_FN_NAMES.map(fn => (
-                  <td key={fn} style={{ ...tdStyle, textAlign: 'center' }}>
-                    <span
-                      onClick={() => toggle(roleIdx, fn)}
-                      title={readOnly ? fn : `Toggle ${fn}`}
-                      style={{
-                        display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
-                        background: selected.includes(fn) ? '#1a1410' : '#e0dbd4',
-                        cursor: readOnly ? 'default' : 'pointer',
-                        transition: 'background 0.1s',
-                      }}
-                    />
-                  </td>
-                ))}
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+    <div>
       {!readOnly && (
-        <div style={{ fontSize: 10, color: '#a09080', marginTop: 6 }}>
-          Click dots to set correct labels. These are permanent once saved.
+        <div style={{ fontSize: 11, color: '#706050', marginBottom: 12, lineHeight: 1.6, background: '#f5f2ee', border: '1px solid #e0dbd4', borderRadius: 6, padding: '10px 14px' }}>
+          Set the correct function level labels for each role. These will be used as ground truth for evaluating model accuracy on all future runs. Click a role title to see its full description. <strong>Labels are permanent once saved and cannot be edited from the results screen.</strong>
         </div>
       )}
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ borderCollapse: 'collapse', border: '1px solid #ede8e2', borderRadius: 6, overflow: 'hidden', minWidth: '100%' }}>
+          <thead>
+            <tr>
+              <th style={{ ...thStyle, minWidth: 180 }}>Role</th>
+              <th style={{ ...thStyle, minWidth: 40 }}>Mo</th>
+              {ALL_FN_NAMES.map(fn => (
+                <th key={fn} style={{ ...thStyle, minWidth: 90 }}>
+                  {fn.replace('Processing ', 'Proc. ').replace('Strategic ', 'Strat. ')}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visibleRoles.map((role, i) => {
+              const roleIdx = roles.indexOf(role)
+              const selected = calibration[roleIdx] || []
+              const isExpanded = expandedRole === roleIdx
+              return (
+                <>
+                  <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#faf8f5' }}>
+                    <td style={tdStyle}>
+                      <div
+                        onClick={() => setExpandedRole(isExpanded ? null : roleIdx)}
+                        style={{ fontWeight: 700, fontSize: 11, cursor: 'pointer', color: '#904060', textDecoration: 'underline', textDecorationStyle: 'dotted' }}
+                        title="Click to view full role description"
+                      >
+                        {role.title}
+                      </div>
+                      <div style={{ color: '#a09080', fontSize: 10 }}>{role.employer}</div>
+                    </td>
+                    <td style={{ ...tdStyle, color: '#a09080', fontSize: 10 }}>{role.months}</td>
+                    {ALL_FN_NAMES.map(fn => (
+                      <td key={fn} style={{ ...tdStyle, textAlign: 'center' }}>
+                        <span
+                          onClick={() => toggle(roleIdx, fn)}
+                          title={readOnly ? fn : `Toggle ${fn}`}
+                          style={{
+                            display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
+                            background: selected.includes(fn) ? '#1a1410' : '#e0dbd4',
+                            cursor: readOnly ? 'default' : 'pointer',
+                            transition: 'background 0.1s',
+                          }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                  {isExpanded && (
+                    <tr key={`${i}-expanded`} style={{ background: '#fdf9f6' }}>
+                      <td colSpan={2 + ALL_FN_NAMES.length} style={{ padding: '12px 16px', borderBottom: '1px solid #ede8e2' }}>
+                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: '#a09080', marginBottom: 8 }}>
+                          {role.title} — {role.employer} — {role.start_raw} to {role.end_raw || 'Present'}
+                        </div>
+                        <pre style={{ fontSize: 11, color: '#1a1410', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit' }}>
+                          {role.text || 'No description available.'}
+                        </pre>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -186,8 +220,8 @@ function ParsedRolesPanel({ roles }) {
             <div style={{ fontWeight: 700, color: r.flagged ? '#c04060' : '#1a1410' }}>{r.title}</div>
             <div style={{ color: '#706050', fontSize: 10 }}>{r.employer}</div>
             {r.flagged
-              ? <div style={{ color: '#c04060', fontSize: 10, marginTop: 2 }}>⚠ {r.flag_reason}</div>
-              : <div style={{ color: '#a09080', fontSize: 10, marginTop: 2 }}>{r.start_raw} → {r.end_raw || 'Present'} · {r.months}mo</div>
+              ? <div style={{ color: '#c04060', fontSize: 10, marginTop: 2 }}>! {r.flag_reason}</div>
+              : <div style={{ color: '#a09080', fontSize: 10, marginTop: 2 }}>{r.start_raw} to {r.end_raw || 'Present'} - {r.months}mo</div>
             }
           </div>
         ))}
@@ -199,56 +233,41 @@ function ParsedRolesPanel({ roles }) {
 // ─── Upload view ──────────────────────────────────────────────────────────────
 
 function UploadView({ onSaved, onCancel, allTags }) {
-  const [mode, setMode]           = useState('paste') // 'paste' | 'pdf'
-  const [rawText, setRawText]     = useState('')
-  const [parsing, setParsing]     = useState(false)
-  const [parseError, setParseError] = useState('')
-  const [roles, setRoles]         = useState(null)
+  const [mode, setMode]               = useState('paste')
+  const [rawText, setRawText]         = useState('')
+  const [pdfFilename, setPdfFilename] = useState('')
+  const [parsing, setParsing]         = useState(false)
+  const [parseError, setParseError]   = useState('')
+  const [roles, setRoles]             = useState(null)
   const [calibration, setCalibration] = useState({})
-  const [name, setName]           = useState('')
-  const [tags, setTags]           = useState([])
-  const [saving, setSaving]       = useState(false)
-  const [saveError, setSaveError] = useState('')
+  const [name, setName]               = useState('')
+  const [tags, setTags]               = useState([])
+  const [saving, setSaving]           = useState(false)
+  const [saveError, setSaveError]     = useState('')
   const fileRef = useRef()
 
   const handlePDF = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = async (ev) => {
-      // Extract text from PDF using basic text extraction
-      // For complex PDFs this may be imperfect — user will see result immediately
-      const typedArray = new Uint8Array(ev.target.result)
-      try {
-        // Dynamically import pdfjs if available, otherwise fall back to raw text
-        const text = await extractPDFText(typedArray)
-        setRawText(text)
-      } catch {
-        setParseError('Could not extract text from PDF. Try pasting the text instead.')
-      }
+    setParseError('')
+    setPdfFilename(file.name)
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+      const pages = await Promise.all(
+        Array.from({ length: pdf.numPages }, (_, i) =>
+          pdf.getPage(i + 1)
+            .then(page => page.getTextContent())
+            .then(tc => tc.items.map(item => item.str).join(' '))
+        )
+      )
+      const text = pages.join('\n\n').trim()
+      if (!text) throw new Error('No text found in PDF — try pasting the text instead')
+      setRawText(text)
+    } catch(err) {
+      setParseError('PDF extraction failed: ' + (err.message || 'unknown error'))
+      setPdfFilename('')
     }
-    reader.readAsArrayBuffer(file)
-  }
-
-  const extractPDFText = async (typedArray) => {
-    // Simple approach: send raw bytes as base64 to the model
-    // The model handles PDF → structured text extraction
-    const base64 = btoa(String.fromCharCode(...typedArray))
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        max_tokens: 4000,
-        system: 'You are a document extractor. Extract all text content from this PDF and return it as plain text, preserving structure like job titles, dates, and bullet points. Return only the extracted text with no preamble.',
-        messages: [{ role: 'user', content: [
-          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
-          { type: 'text', text: 'Extract all text from this resume PDF.' }
-        ]}],
-      }),
-    })
-    const data = await res.json()
-    if (data.error) throw new Error(data.error.message)
-    return (data.content || []).map(b => b.text || '').join('')
   }
 
   const handleParse = async () => {
@@ -284,7 +303,6 @@ function UploadView({ onSaved, onCancel, allTags }) {
     setSaving(true)
     setSaveError('')
     try {
-      // Insert resume
       const { data: resume, error: resumeErr } = await supabase
         .from('research_resumes')
         .insert({ name: name.trim(), clean_text: rawText, parsed_roles: roles, tags })
@@ -292,7 +310,6 @@ function UploadView({ onSaved, onCancel, allTags }) {
         .single()
       if (resumeErr) throw resumeErr
 
-      // Insert calibrations
       const calibRows = Object.entries(calibration)
         .filter(([, labels]) => labels.length > 0)
         .map(([roleIndex, labels]) => ({
@@ -322,11 +339,11 @@ function UploadView({ onSaved, onCancel, allTags }) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-        <button onClick={onCancel} style={ghostBtn}>← Back</button>
+        <button onClick={onCancel} style={ghostBtn}>Back</button>
         <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1410' }}>Upload Resume</div>
       </div>
 
-      {/* Step 1 — Input */}
+      {/* Step 1 */}
       <div style={{ background: '#faf8f5', border: '1px solid #e0dbd4', borderRadius: 6, padding: '16px 20px', marginBottom: 20 }}>
         <div style={{ ...label9, marginBottom: 14 }}>Step 1 — Paste text or upload PDF</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
@@ -345,27 +362,27 @@ function UploadView({ onSaved, onCancel, allTags }) {
           <div>
             <input ref={fileRef} type="file" accept=".pdf" onChange={handlePDF} style={{ display: 'none' }} />
             <button onClick={() => fileRef.current.click()} style={ghostBtn}>Choose PDF file</button>
-            {rawText && <div style={{ fontSize: 11, color: '#2a7a6a', marginTop: 8 }}>✓ PDF text extracted — {rawText.length} characters</div>}
+            {pdfFilename && !parseError && (
+              <div style={{ fontSize: 11, color: '#2a7a6a', marginTop: 8 }}>
+                {pdfFilename} — {rawText.length} characters extracted
+              </div>
+            )}
           </div>
         )}
-
-        <button
-          onClick={handleParse}
-          disabled={!canParse}
-          style={{ ...primaryBtn(!canParse), marginTop: 14 }}
-        >
-          {parsing ? 'Parsing...' : 'Parse roles →'}
-        </button>
 
         {parseError && (
           <div style={{ background: '#fef2f2', border: '0.5px solid #fca5a5', borderRadius: 6, padding: '10px 12px', fontSize: 11, color: '#c04060', marginTop: 10 }}>{parseError}</div>
         )}
+
+        <button onClick={handleParse} disabled={!canParse} style={{ ...primaryBtn(!canParse), marginTop: 14 }}>
+          {parsing ? 'Parsing...' : 'Parse roles'}
+        </button>
       </div>
 
-      {/* Step 2 — Parsed roles + calibration */}
+      {/* Step 2 — Calibration */}
       {roles && (
         <div style={{ background: '#faf8f5', border: '1px solid #e0dbd4', borderRadius: 6, padding: '16px 20px', marginBottom: 20 }}>
-          <div style={{ ...label9, marginBottom: 14 }}>Step 2 — Set calibration labels</div>
+          <div style={{ ...label9, marginBottom: 14 }}>Step 2 — Review and calibrate</div>
           <ParsedRolesPanel roles={roles} />
           <CalibrationGrid roles={roles} calibration={calibration} onChange={setCalibration} readOnly={false} />
         </div>
@@ -396,7 +413,7 @@ function UploadView({ onSaved, onCancel, allTags }) {
           )}
 
           <button onClick={handleSave} disabled={!canSave} style={primaryBtn(!canSave)}>
-            {saving ? 'Saving...' : 'Save to library →'}
+            {saving ? 'Saving...' : 'Save to library'}
           </button>
         </div>
       )}
@@ -415,14 +432,12 @@ function DetailView({ resume, calibrations, onBack }) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-        <button onClick={onBack} style={ghostBtn}>← Back</button>
+        <button onClick={onBack} style={ghostBtn}>Back</button>
         <div>
           <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1410' }}>{resume.name}</div>
           <div style={{ fontSize: 11, color: '#a09080', marginTop: 2 }}>
             {resume.id.slice(0, 8).toUpperCase()} · {new Date(resume.created_at).toLocaleDateString()}
-            {resume.tags?.length > 0 && (
-              <span> · {resume.tags.join(', ')}</span>
-            )}
+            {resume.tags?.length > 0 && <span> · {resume.tags.join(', ')}</span>}
           </div>
         </div>
       </div>
@@ -511,14 +526,13 @@ function LibraryView({ resumes, onUpload, onSelect }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ResearchResumeLibrary() {
-  const [view, setView]               = useState('library') // 'library' | 'upload' | 'detail'
-  const [resumes, setResumes]         = useState([])
-  const [selectedResume, setSelectedResume] = useState(null)
+  const [view, setView]                         = useState('library')
+  const [resumes, setResumes]                   = useState([])
+  const [selectedResume, setSelectedResume]     = useState(null)
   const [selectedCalibrations, setSelectedCalibrations] = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [error, setError]             = useState('')
+  const [loading, setLoading]                   = useState(true)
+  const [error, setError]                       = useState('')
 
-  // All tags across all resumes for autocomplete
   const allTags = [...new Set(resumes.flatMap(r => r.tags || []))]
 
   const fetchResumes = async () => {
@@ -545,14 +559,13 @@ export default function ResearchResumeLibrary() {
     setView('detail')
   }
 
-  const handleSaved = (resume) => {
+  const handleSaved = () => {
     fetchResumes()
-    setSelectedResume(resume)
     setView('library')
   }
 
   if (loading) return <div style={{ fontSize: 12, color: '#a09080' }}>Loading...</div>
-  if (error) return <div style={{ fontSize: 12, color: '#c04060' }}>{error}</div>
+  if (error)   return <div style={{ fontSize: 12, color: '#c04060' }}>{error}</div>
 
   if (view === 'upload') {
     return <UploadView onSaved={handleSaved} onCancel={() => setView('library')} allTags={allTags} />
