@@ -423,24 +423,118 @@ function UploadView({ onSaved, onCancel, allTags }) {
 
 // ─── Detail view ──────────────────────────────────────────────────────────────
 
-function DetailView({ resume, calibrations, onBack }) {
-  const calMap = calibrations.reduce((acc, c) => {
-    acc[c.role_index] = c.labels
-    return acc
-  }, {})
+function DetailView({ resume, calibrations, onBack, allTags, onUpdated }) {
+  const [editing, setEditing]       = useState(false)
+  const [name, setName]             = useState(resume.name)
+  const [tags, setTags]             = useState(resume.tags || [])
+  const [calibration, setCalibration] = useState(
+    calibrations.reduce((acc, c) => { acc[c.role_index] = c.labels; return acc }, {})
+  )
+  const [saving, setSaving]         = useState(false)
+  const [saveError, setSaveError]   = useState('')
+  const [showCalibWarning, setShowCalibWarning] = useState(false)
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSaveError('')
+    try {
+      // Update name and tags
+      const { error: resumeErr } = await supabase
+        .from('research_resumes')
+        .update({ name: name.trim(), tags })
+        .eq('id', resume.id)
+      if (resumeErr) throw resumeErr
+
+      // Replace calibrations — delete existing, insert new
+      const { error: deleteErr } = await supabase
+        .from('research_calibrations')
+        .delete()
+        .eq('resume_id', resume.id)
+      if (deleteErr) throw deleteErr
+
+      const calibRows = Object.entries(calibration)
+        .filter(([, labels]) => labels.length > 0)
+        .map(([roleIndex, labels]) => ({
+          resume_id: resume.id,
+          role_index: parseInt(roleIndex),
+          labels,
+        }))
+
+      if (calibRows.length > 0) {
+        const { error: calibErr } = await supabase
+          .from('research_calibrations')
+          .insert(calibRows)
+        if (calibErr) throw calibErr
+      }
+
+      setEditing(false)
+      setShowCalibWarning(false)
+      onUpdated({ ...resume, name: name.trim(), tags })
+    } catch(e) {
+      setSaveError('Save failed: ' + (e.message || 'unknown error'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCancel = () => {
+    setName(resume.name)
+    setTags(resume.tags || [])
+    setCalibration(calibrations.reduce((acc, c) => { acc[c.role_index] = c.labels; return acc }, {}))
+    setEditing(false)
+    setSaveError('')
+    setShowCalibWarning(false)
+  }
+
+  const handleCalibrationChange = (newCalib) => {
+    setShowCalibWarning(true)
+    setCalibration(newCalib)
+  }
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-        <button onClick={onBack} style={ghostBtn}>Back</button>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1410' }}>{resume.name}</div>
-          <div style={{ fontSize: 11, color: '#a09080', marginTop: 2 }}>
-            {resume.id.slice(0, 8).toUpperCase()} · {new Date(resume.created_at).toLocaleDateString()}
-            {resume.tags?.length > 0 && <span> · {resume.tags.join(', ')}</span>}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <button onClick={onBack} style={ghostBtn}>Back</button>
+          <div>
+            {editing ? (
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                style={{ fontSize: 22, fontWeight: 700, color: '#1a1410', border: '1px solid #d8d0c4', borderRadius: 6, padding: '4px 10px', fontFamily: 'inherit', outline: 'none' }}
+              />
+            ) : (
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1410' }}>{name}</div>
+            )}
+            <div style={{ fontSize: 11, color: '#a09080', marginTop: 2 }}>
+              {resume.id.slice(0, 8).toUpperCase()} · {new Date(resume.created_at).toLocaleDateString()}
+            </div>
           </div>
         </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {editing ? (
+            <>
+              <button onClick={handleCancel} style={ghostBtn}>Cancel</button>
+              <button onClick={handleSave} disabled={saving || !name.trim()} style={primaryBtn(saving || !name.trim())}>
+                {saving ? 'Saving...' : 'Save changes'}
+              </button>
+            </>
+          ) : (
+            <button onClick={() => setEditing(true)} style={ghostBtn}>Edit</button>
+          )}
+        </div>
       </div>
+
+      {saveError && (
+        <div style={{ background: '#fef2f2', border: '0.5px solid #fca5a5', borderRadius: 6, padding: '10px 12px', fontSize: 11, color: '#c04060', marginBottom: 16 }}>{saveError}</div>
+      )}
+
+      {editing && (
+        <div style={{ background: '#faf8f5', border: '1px solid #e0dbd4', borderRadius: 6, padding: '16px 20px', marginBottom: 20 }}>
+          <div style={{ ...label9, marginBottom: 10 }}>Industry tags</div>
+          <TagInput tags={tags} onChange={setTags} allTags={allTags} />
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
         <div style={{ background: '#faf8f5', border: '1px solid #e0dbd4', borderRadius: 6, padding: '16px 20px' }}>
@@ -455,8 +549,20 @@ function DetailView({ resume, calibrations, onBack }) {
       </div>
 
       <div style={{ background: '#faf8f5', border: '1px solid #e0dbd4', borderRadius: 6, padding: '16px 20px' }}>
-        <div style={{ ...label9, marginBottom: 14 }}>Calibration labels (read only)</div>
-        <CalibrationGrid roles={resume.parsed_roles} calibration={calMap} onChange={() => {}} readOnly={true} />
+        <div style={{ ...label9, marginBottom: 14 }}>
+          Calibration labels {editing ? '— editing' : '— read only'}
+        </div>
+        {showCalibWarning && (
+          <div style={{ background: '#fff8e6', border: '1px solid #f5d87a', borderRadius: 6, padding: '10px 14px', fontSize: 11, color: '#7a5c00', marginBottom: 14 }}>
+            Editing calibration will affect accuracy scores on all historical runs against this resume.
+          </div>
+        )}
+        <CalibrationGrid
+          roles={resume.parsed_roles}
+          calibration={calibration}
+          onChange={editing ? handleCalibrationChange : () => {}}
+          readOnly={!editing}
+        />
       </div>
     </div>
   )
@@ -564,6 +670,11 @@ export default function ResearchResumeLibrary() {
     setView('library')
   }
 
+  const handleUpdated = (updatedResume) => {
+    setSelectedResume(updatedResume)
+    setResumes(prev => prev.map(r => r.id === updatedResume.id ? { ...r, ...updatedResume } : r))
+  }
+
   if (loading) return <div style={{ fontSize: 12, color: '#a09080' }}>Loading...</div>
   if (error)   return <div style={{ fontSize: 12, color: '#c04060' }}>{error}</div>
 
@@ -572,7 +683,7 @@ export default function ResearchResumeLibrary() {
   }
 
   if (view === 'detail' && selectedResume) {
-    return <DetailView resume={selectedResume} calibrations={selectedCalibrations} onBack={() => setView('library')} />
+    return <DetailView resume={selectedResume} calibrations={selectedCalibrations} onBack={() => setView('library')} allTags={allTags} onUpdated={handleUpdated} />
   }
 
   return <LibraryView resumes={resumes} onUpload={() => setView('upload')} onSelect={handleSelect} />
