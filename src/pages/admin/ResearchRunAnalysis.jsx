@@ -426,11 +426,12 @@ export default function ResearchRunAnalysis() {
       }
     })
 
-  const updateRunState = (resumeId, patch) => {
-    setRunStates(prev => ({
-      ...prev,
-      [resumeId]: { ...prev[resumeId], ...patch },
-    }))
+  const updateRunState = (resumeId, patchOrFn) => {
+    setRunStates(prev => {
+      const current = prev[resumeId] || {}
+      const patch = typeof patchOrFn === 'function' ? patchOrFn(current) : patchOrFn
+      return { ...prev, [resumeId]: { ...current, ...patch } }
+    })
   }
 
   const saveRunToSupabase = async (resumeId, parsedRoles, variantResults, components, variants) => {
@@ -448,7 +449,6 @@ export default function ResearchRunAnalysis() {
         .from('research_runs')
         .insert({
           resume_id:             resumeId,
-          prompt_version_id:     null, // will be used when prompts move to Supabase
           parsed_roles_snapshot: parsedRoles,
           settings,
           notes: notes.trim() || null,
