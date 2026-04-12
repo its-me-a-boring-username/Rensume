@@ -138,6 +138,7 @@ export default function ResearchReviewQueue() {
   const [selectedResultId, setSelectedResultId] = useState(null)
   const [selectedRoleIndex, setSelectedRoleIndex] = useState(null)
   const [highlightPhrase, setHighlightPhrase] = useState("")
+  const [targetsCollapsed, setTargetsCollapsed] = useState(true)
   const roleRefs = useRef({})
 
   const [reviewRow, setReviewRow] = useState(null)
@@ -520,40 +521,51 @@ export default function ResearchReviewQueue() {
       ) : queueRows.length === 0 ? (
         <div style={{ fontSize: 12, color: "#a09080" }}>No analyzed variants found yet. Run analysis first.</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 16 }}>
-          <div style={{ background: "#faf8f5", border: "1px solid #e0dbd4", borderRadius: 6, padding: "12px 10px", maxHeight: "calc(100vh - 220px)", overflowY: "auto" }}>
-            <div style={{ ...label9, margin: "0 6px 10px" }}>Review targets</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {queueRows.map((row) => {
-                const active = row.run_result_id === selectedResultId
-                const finalized = row.review_status === "finalized"
-                return (
-                  <button
-                    key={row.run_result_id}
-                    onClick={() => setSelectedResultId(row.run_result_id)}
-                    style={{
-                      textAlign: "left",
-                      borderRadius: 6,
-                      border: `1px solid ${active ? "#904060" : "#e0dbd4"}`,
-                      background: active ? "#f5eaee" : "white",
-                      padding: "9px 10px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1410", marginBottom: 1 }}>{row.resume_name}</div>
-                    <div style={{ fontSize: 10, color: "#706050", marginBottom: 4 }}>{row.variant_label}</div>
-                    <div style={{ fontSize: 10, color: "#a09080" }}>{formatDate(row.run_created_at)}</div>
-                    <div style={{ marginTop: 5, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 10, color: finalized ? "#2a7a6a" : "#a09080" }}>
-                        {finalized ? "Finalized" : "Draft"}
-                      </span>
-                      <span style={{ fontSize: 10, color: "#706050" }}>{Number(row.coverage_pct || 0).toFixed(0)}%</span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
+        <div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+            <button
+              onClick={() => setTargetsCollapsed((prev) => !prev)}
+              style={{ border: "1px solid #d8d0c4", background: "white", color: "#706050", borderRadius: 4, padding: "6px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+            >
+              {targetsCollapsed ? "Show Review Targets" : "Hide Review Targets"}
+            </button>
           </div>
+          <div style={{ display: "grid", gridTemplateColumns: targetsCollapsed ? "1fr" : "320px 1fr", gap: 16 }}>
+            {!targetsCollapsed && (
+              <div style={{ background: "#faf8f5", border: "1px solid #e0dbd4", borderRadius: 6, padding: "12px 10px", maxHeight: "calc(100vh - 220px)", overflowY: "auto" }}>
+                <div style={{ ...label9, margin: "0 6px 10px" }}>Review targets</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {queueRows.map((row) => {
+                    const active = row.run_result_id === selectedResultId
+                    const finalized = row.review_status === "finalized"
+                    return (
+                      <button
+                        key={row.run_result_id}
+                        onClick={() => setSelectedResultId(row.run_result_id)}
+                        style={{
+                          textAlign: "left",
+                          borderRadius: 6,
+                          border: `1px solid ${active ? "#904060" : "#e0dbd4"}`,
+                          background: active ? "#f5eaee" : "white",
+                          padding: "9px 10px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1410", marginBottom: 1 }}>{row.resume_name}</div>
+                        <div style={{ fontSize: 10, color: "#706050", marginBottom: 4 }}>{row.variant_label}</div>
+                        <div style={{ fontSize: 10, color: "#a09080" }}>{formatDate(row.run_created_at)}</div>
+                        <div style={{ marginTop: 5, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <span style={{ fontSize: 10, color: finalized ? "#2a7a6a" : "#a09080" }}>
+                            {finalized ? "Finalized" : "Draft"}
+                          </span>
+                          <span style={{ fontSize: 10, color: "#706050" }}>{Number(row.coverage_pct || 0).toFixed(0)}%</span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
           {!selectedContext ? (
             <div style={{ background: "#faf8f5", border: "1px solid #e0dbd4", borderRadius: 6, padding: "14px 16px", fontSize: 12, color: "#a09080" }}>
@@ -763,6 +775,7 @@ export default function ResearchReviewQueue() {
               </div>
             </div>
           )}
+          </div>
         </div>
       )}
     </div>
