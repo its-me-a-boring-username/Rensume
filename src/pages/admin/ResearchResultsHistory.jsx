@@ -196,28 +196,53 @@ function RunHeader({ run, variantRows }) {
     ? (blindFromRows === true || blindFromRows === "true" ? "On" : "Off")
     : (settings.blind === true ? "On" : settings.blind === false ? "Off" : "Not recorded")
 
-  const lines = [
+  const leftLines = [
     { label: "Models", value: models },
     { label: "Rules", value: rules },
     { label: "Extraction Prompt", value: extractPrompt },
     { label: "Evidence", value: evidence },
     { label: "Function Level Definitions", value: fnDefs },
-    { label: "Blind Mode", value: blindMode },
-    { label: "Run Date", value: formatDate(run.created_at) },
-    { label: "Run ID", value: run.id ? run.id.slice(0, 8).toUpperCase() : "Not recorded" },
   ]
+  const runDate = formatDate(run.created_at)
+  const runId = run.id ? run.id.slice(0, 8).toUpperCase() : "Not recorded"
 
   return (
     <div style={{ background: "white", border: "1px solid #e0dbd4", borderRadius: 8, padding: "16px 18px", marginBottom: 14 }}>
-      <div style={{ fontSize: 22, fontWeight: 700, color: "#1a1410", marginBottom: 10 }}>{safeResumeName(run)}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {lines.map((line) => (
-          <div key={line.label} style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1410", minWidth: 178 }}>{line.label}:</span>
-            <span style={{ fontSize: 14, color: "#403830", lineHeight: 1.45 }}>{line.value || "Not recorded"}</span>
-          </div>
-        ))}
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 24, fontWeight: 700, color: "#1a1410" }}>{safeResumeName(run)}</div>
+        <div style={{ fontSize: 12, color: "#706050", display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <span><strong>Run Date:</strong> {runDate}</span>
+          <span><strong>Run ID:</strong> {runId}</span>
+        </div>
       </div>
+      <div className="run-header-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {leftLines.map((line) => (
+            <div key={line.label} style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1410", minWidth: 170 }}>{line.label}:</span>
+              <span style={{ fontSize: 14, color: "#403830", lineHeight: 1.45 }}>{line.value || "Not recorded"}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1410", marginBottom: 2 }}>Blind Mode:</div>
+            <div style={{ fontSize: 14, color: "#403830", lineHeight: 1.45 }}>{blindMode}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1410", marginBottom: 2 }}>Run Notes:</div>
+            <div style={{ fontSize: 12, color: "#403830", lineHeight: 1.5 }}>{run.notes?.trim() || "No notes for this run."}</div>
+          </div>
+        </div>
+      </div>
+      <div style={{ marginTop: 10, fontSize: 10, color: "#a09080" }}>{parseSettingsSummary(settings)}</div>
+      <style>{`
+        @media (max-width: 900px) {
+          .run-header-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }
@@ -474,7 +499,7 @@ export default function ResearchResultsHistory() {
   return (
     <div>
       <div style={{ marginBottom: 18 }}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: "#1a1410", marginBottom: 4 }}>Results History</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: "#1a1410", marginBottom: 4 }}>Data</div>
         <div style={{ fontSize: 12, color: "#706050" }}>Browse saved runs, compare dot-grid outputs, and remove noisy test runs.</div>
       </div>
 
@@ -544,11 +569,6 @@ export default function ResearchResultsHistory() {
             ) : (
               <>
                 <RunHeader run={selectedRun} variantRows={variantRows} />
-
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ ...label9, marginBottom: 5 }}>Run notes</div>
-                  <div style={{ fontSize: 11, color: "#706050", lineHeight: 1.6 }}>{selectedRun.notes?.trim() || "No notes for this run."}</div>
-                </div>
 
                 <div style={{ ...label9, marginBottom: 8 }}>Role-level label assignments</div>
                 {variantLoading ? (

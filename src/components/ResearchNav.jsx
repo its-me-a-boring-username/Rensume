@@ -5,7 +5,9 @@ import { supabase } from "../lib/supabase.js"
 const LINKS = [
   { label: 'Resumes', path: '/admin/resumes' },
   { label: 'Run',     path: '/admin'         },
-  { label: 'Results', path: '/admin/results' },
+  { label: 'Review',  path: '/admin/review'  },
+  { label: 'Data',    path: '/admin/results' },
+  { label: 'Results', path: '/admin/viz'     },
 ]
 
 export default function ResearchNav() {

@@ -9,6 +9,8 @@ import ResearchNav from './components/ResearchNav.jsx'
 import ResearchRunAnalysis from './pages/admin/ResearchRunAnalysis.jsx'
 import ResearchResumeLibrary from './pages/admin/ResearchResumeLibrary.jsx'
 import ResearchResultsHistory from './pages/admin/ResearchResultsHistory.jsx'
+import ResearchReviewQueue from './pages/admin/ResearchReviewQueue.jsx'
+import ResearchResultsViz from './pages/admin/ResearchResultsViz.jsx'
 import './index.css'
 
 function AdminShell({ children }) {
@@ -69,6 +71,22 @@ function AdminApp() {
         element={
           <AdminRoute session={session}>
             <AdminShell><ResearchResultsHistory /></AdminShell>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/review"
+        element={
+          <AdminRoute session={session}>
+            <AdminShell><ResearchReviewQueue /></AdminShell>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/viz"
+        element={
+          <AdminRoute session={session}>
+            <AdminShell><ResearchResultsViz /></AdminShell>
           </AdminRoute>
         }
       />
