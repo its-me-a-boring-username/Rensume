@@ -10,6 +10,7 @@ const label9 = {
 }
 
 const FLAG_OPTIONS = [
+  { key: "missed_evidence", label: "Missed evidence" },
   { key: "hallucinated_evidence", label: "Hallucinated evidence" },
   { key: "misleading_quote", label: "Misleading quote" },
   { key: "irrelevant_evidence", label: "Irrelevant evidence" },
@@ -132,6 +133,7 @@ export default function ResearchReviewQueue() {
   const [reviewRow, setReviewRow] = useState(null)
   const [itemState, setItemState] = useState({})
   const [parentRatings, setParentRatings] = useState({})
+  const [parentMissedEvidence, setParentMissedEvidence] = useState({})
 
   useEffect(() => {
     let cancelled = false
@@ -264,6 +266,7 @@ export default function ResearchReviewQueue() {
     setReviewRow(null)
     setItemState({})
     setParentRatings({})
+    setParentMissedEvidence({})
   }, [selectedResultId])
 
   useEffect(() => {
@@ -294,14 +297,19 @@ export default function ResearchReviewQueue() {
         setReviewRow(existingReview)
         setItemState(mapped)
         const parent = {}
+        const missed = {}
         const labels = [...new Set(normalizedItems.map((i) => i.label_name))]
         for (const label of labels) {
-          parent[label] = summarizeParentRating(
-            normalizedItems.filter((i) => i.label_name === label),
-            mapped,
-          )
+          const labelItems = normalizedItems.filter((i) => i.label_name === label)
+          parent[label] = summarizeParentRating(labelItems, mapped)
+          missed[label] = labelItems.some((i) => {
+            const key = `${i.role_index}::${i.label_name}`
+            const flags = mapped[key]?.flags || []
+            return Array.isArray(flags) && flags.includes("missed_evidence")
+          })
         }
         setParentRatings(parent)
+        setParentMissedEvidence(missed)
       }
     }
     loadReviewItems()
@@ -369,14 +377,24 @@ export default function ResearchReviewQueue() {
     setParentRatings((prev) => ({ ...prev, [labelName]: rating }))
     if (rating !== "accurate") return
     const children = functionBuckets[labelName] || []
+    const keepMissedEvidence = Boolean(parentMissedEvidence[labelName])
     setItemState((prev) => {
       const next = { ...prev }
       for (const item of children) {
         const key = `${item.role_index}::${item.label_name}`
-        next[key] = { ...(next[key] || {}), rating: "accurate", flags: [], note: "" }
+        next[key] = {
+          ...(next[key] || {}),
+          rating: "accurate",
+          flags: keepMissedEvidence ? ["missed_evidence"] : [],
+          note: "",
+        }
       }
       return next
     })
+  }
+
+  const toggleParentMissedEvidence = (labelName) => {
+    setParentMissedEvidence((prev) => ({ ...prev, [labelName]: !prev[labelName] }))
   }
 
   const persist = async (nextStatus = "draft") => {
@@ -411,8 +429,13 @@ export default function ResearchReviewQueue() {
         const key = `${item.role_index}::${item.label_name}`
         const local = itemState[key] || {}
         const parent = parentRatings[item.label_name] || ""
+        const missedEvidence = Boolean(parentMissedEvidence[item.label_name])
         const effectiveRating = parent === "accurate" ? "accurate" : (local.rating || null)
-        const effectiveFlags = parent === "accurate" ? [] : (Array.isArray(local.flags) ? local.flags : [])
+        const baseFlags = Array.isArray(local.flags) ? local.flags : []
+        const flagSet = new Set(baseFlags)
+        if (missedEvidence) flagSet.add("missed_evidence")
+        else flagSet.delete("missed_evidence")
+        const effectiveFlags = Array.from(flagSet)
         const effectiveNote = parent === "accurate" ? null : (local.note || null)
         return {
           variant_review_id: vr.id,
@@ -602,7 +625,27 @@ export default function ResearchReviewQueue() {
                               <RatingPill active={parent === "accurate"} label="Accurate (apply to all roles)" color="#2a7a6a" onClick={() => setParentRating(labelName, "accurate")} />
                               <RatingPill active={parent === "partially_accurate"} label="Partially accurate" color="#c07030" onClick={() => setParentRating(labelName, "partially_accurate")} />
                               <RatingPill active={parent === "inaccurate"} label="Inaccurate" color="#c04060" onClick={() => setParentRating(labelName, "inaccurate")} />
+                              <button
+                                onClick={() => toggleParentMissedEvidence(labelName)}
+                                style={{
+                                  border: `1px solid ${parentMissedEvidence[labelName] ? "#904060" : "#d8d0c4"}`,
+                                  background: parentMissedEvidence[labelName] ? "#f5eaee" : "white",
+                                  color: parentMissedEvidence[labelName] ? "#904060" : "#706050",
+                                  borderRadius: 999,
+                                  padding: "3px 10px",
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                Missed Evidence
+                              </button>
                             </div>
+                            {parentMissedEvidence[labelName] && (
+                              <div style={{ fontSize: 10, color: "#904060", marginBottom: 7 }}>
+                                Flagged: reviewer believes supporting evidence was missed for this function.
+                              </div>
+                            )}
 
                             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: showRoleEscalation ? 8 : 0 }}>
                               {items.map((item, idx) => (
