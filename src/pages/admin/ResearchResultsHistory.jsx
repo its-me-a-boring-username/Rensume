@@ -6,6 +6,13 @@
 import { useEffect, useMemo, useState } from "react"
 import RoleLabelDotTable from "../../components/RoleLabelDotTable.jsx"
 import { supabase } from "../../lib/supabase.js"
+import {
+  AVAILABLE_MODELS,
+  CLASSIFICATION_RULES,
+  EVIDENCE_INSTRUCTIONS,
+  EXTRACT_PROMPTS,
+  FN_DEFINITIONS,
+} from "../../lib/researchClassifier.js"
 
 const label9 = {
   fontSize: 9,
@@ -16,6 +23,11 @@ const label9 = {
 }
 
 const ACCENT_COLORS = ["#904060", "#3a6aaa", "#c07030", "#2a7a6a", "#7a3aaa", "#aa6a2a", "#3aaa6a", "#aa3a3a"]
+const MODEL_LABEL_MAP = Object.fromEntries(AVAILABLE_MODELS.map(m => [m.key, m.label]))
+const RULE_NAME_MAP = Object.fromEntries(CLASSIFICATION_RULES.map(x => [x.key, x.name]))
+const EVIDENCE_NAME_MAP = Object.fromEntries(EVIDENCE_INSTRUCTIONS.map(x => [x.key, x.name]))
+const EXTRACT_NAME_MAP = Object.fromEntries(EXTRACT_PROMPTS.map(x => [x.key, x.name]))
+const FN_DEFS_NAME_MAP = Object.fromEntries(FN_DEFINITIONS.map(x => [x.key, x.name]))
 
 function formatDate(ts) {
   if (!ts) return "Unknown date"
@@ -38,6 +50,62 @@ function parseSettingsSummary(settings) {
   const models = Array.isArray(settings.models) ? settings.models.length : 0
   const blind = settings.blind ? "Blind on" : "Blind off"
   return `${models} variant${models === 1 ? "" : "s"} • ${blind}`
+}
+
+function normalizeLabel(text) {
+  if (!text || typeof text !== "string") return ""
+  return text.replace(" — ", " ")
+}
+
+function firstNonEmpty(rows, key) {
+  for (const r of rows || []) {
+    if (typeof r?.[key] === "string" && r[key].trim()) return r[key].trim()
+  }
+  return ""
+}
+
+function firstDefined(rows, key) {
+  for (const r of rows || []) {
+    if (r && r[key] !== null && r[key] !== undefined) return r[key]
+  }
+  return null
+}
+
+function parseModelKeyFromVariantKey(variantKey) {
+  if (!variantKey || typeof variantKey !== "string") return ""
+  if (variantKey.endsWith("_blind")) return variantKey.slice(0, -6)
+  if (variantKey.endsWith("_titled")) return variantKey.slice(0, -7)
+  return ""
+}
+
+function formatHeaderModels(variantRows, settings) {
+  const fromVariants = [...new Set(
+    (variantRows || [])
+      .map(r =>
+        r.model_label ||
+        MODEL_LABEL_MAP[r.model_key] ||
+        MODEL_LABEL_MAP[parseModelKeyFromVariantKey(r.variant_key)] ||
+        r.model_string
+      )
+      .filter(Boolean)
+  )]
+  if (fromVariants.length) return fromVariants.join(", ")
+
+  const fromSettings = [...new Set(
+    (settings?.models || [])
+      .map(m => MODEL_LABEL_MAP[m?.key] || m?.model_string || "")
+      .filter(Boolean)
+  )]
+  if (fromSettings.length) return fromSettings.join(", ")
+  return "Not recorded"
+}
+
+function formatHeaderValue(variantRows, settings, rowKey, settingsKey, nameMap) {
+  const variantValue = firstNonEmpty(variantRows, rowKey)
+  const settingsValue = typeof settings?.[settingsKey] === "string" ? settings[settingsKey] : ""
+  const resolvedKey = variantValue || settingsValue
+  if (!resolvedKey) return "Not recorded"
+  return normalizeLabel(nameMap?.[resolvedKey] || resolvedKey)
 }
 
 function parseVariantMeta(row, index) {
@@ -108,6 +176,47 @@ function VariantDetails({ row, accent }) {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function RunHeader({ run, variantRows }) {
+  if (!run) return null
+  const settings = run.settings && typeof run.settings === "object" ? run.settings : {}
+
+  const models = formatHeaderModels(variantRows, settings)
+  const rules = formatHeaderValue(variantRows, settings, "rules_key", "rules_key", RULE_NAME_MAP)
+  const extractPrompt = formatHeaderValue(variantRows, settings, "extract_key", "extract_key", EXTRACT_NAME_MAP)
+  const evidence = formatHeaderValue(variantRows, settings, "evidence_key", "evidence_key", EVIDENCE_NAME_MAP)
+  const fnDefs = formatHeaderValue(variantRows, settings, "fn_defs_key", "fn_defs_key", FN_DEFS_NAME_MAP)
+
+  const blindFromRows = firstDefined(variantRows, "blind_mode")
+  const blindMode = blindFromRows !== null
+    ? (blindFromRows === true || blindFromRows === "true" ? "On" : "Off")
+    : (settings.blind === true ? "On" : settings.blind === false ? "Off" : "Not recorded")
+
+  const lines = [
+    { label: "Models", value: models },
+    { label: "Rules", value: rules },
+    { label: "Extraction Prompt", value: extractPrompt },
+    { label: "Evidence", value: evidence },
+    { label: "Function Level Definitions", value: fnDefs },
+    { label: "Blind Mode", value: blindMode },
+    { label: "Run Date", value: formatDate(run.created_at) },
+    { label: "Run ID", value: run.id ? run.id.slice(0, 8).toUpperCase() : "Not recorded" },
+  ]
+
+  return (
+    <div style={{ background: "white", border: "1px solid #e0dbd4", borderRadius: 8, padding: "16px 18px", marginBottom: 14 }}>
+      <div style={{ fontSize: 22, fontWeight: 700, color: "#1a1410", marginBottom: 10 }}>{safeResumeName(run)}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {lines.map((line) => (
+          <div key={line.label} style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1410", minWidth: 178 }}>{line.label}:</span>
+            <span style={{ fontSize: 14, color: "#403830", lineHeight: 1.45 }}>{line.value || "Not recorded"}</span>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -251,10 +360,10 @@ export default function ResearchResultsHistory() {
 
       let { data, error } = await supabase
         .from("research_run_results")
-        .select("id, run_id, variant_key, variant_label, model_string, model_label, classifications, summary, strengths, functions")
+        .select("id, run_id, variant_key, variant_label, model_string, model_key, model_label, blind_mode, rules_key, evidence_key, extract_key, fn_defs_key, classifications, summary, strengths, functions")
         .eq("run_id", selectedRunId)
         .order("variant_key", { ascending: true })
-      if (error && /variant_label|model_label|column/i.test(error.message || "")) {
+      if (error && /variant_label|model_label|model_key|blind_mode|rules_key|evidence_key|extract_key|fn_defs_key|column/i.test(error.message || "")) {
         const legacy = await supabase
           .from("research_run_results")
           .select("id, run_id, variant_key, model_string, classifications, summary, strengths, functions")
@@ -434,13 +543,7 @@ export default function ResearchResultsHistory() {
               <div style={{ fontSize: 12, color: "#a09080" }}>Select a run to view details.</div>
             ) : (
               <>
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: "#1a1410", marginBottom: 4 }}>{safeResumeName(selectedRun)}</div>
-                  <div style={{ fontSize: 10, color: "#a09080", marginBottom: 4 }}>
-                    {selectedRun.id.slice(0, 8).toUpperCase()} • {formatDate(selectedRun.created_at)}
-                  </div>
-                  <div style={{ fontSize: 10, color: "#706050" }}>{parseSettingsSummary(selectedRun.settings)}</div>
-                </div>
+                <RunHeader run={selectedRun} variantRows={variantRows} />
 
                 <div style={{ marginBottom: 14 }}>
                   <div style={{ ...label9, marginBottom: 5 }}>Run notes</div>
