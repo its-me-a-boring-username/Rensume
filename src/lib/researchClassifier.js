@@ -379,6 +379,25 @@ export async function getSummary(resumeText, model) {
 }
 
 export function aggregateLabels(roles, classifications) {
+  const pickBestEvidence = (evidences) => {
+    const cleaned = [...new Set(
+      (Array.isArray(evidences) ? evidences : [])
+        .map(e => (typeof e === 'string' ? e.trim() : ''))
+        .filter(Boolean)
+    )]
+    if (!cleaned.length) return ''
+
+    const score = (text) => {
+      let s = Math.min(text.length, 220)
+      if (/\d/.test(text)) s += 10
+      if (/['"]/.test(text)) s += 4
+      if (/\b(led|managed|built|designed|owned|drove|launched|reduced|improved|increased|defined|directed)\b/i.test(text)) s += 8
+      return s
+    }
+
+    return cleaned.sort((a, b) => score(b) - score(a))[0]
+  }
+
   const labelAccum = {}
   for (const roleClass of classifications) {
     const role = roles[roleClass.role_index]
@@ -394,7 +413,7 @@ export function aggregateLabels(roles, classifications) {
   return Object.values(labelAccum).map(l => ({
     name:     l.name,
     months:   l.months,
-    evidence: l.evidences.slice(0, 2).join(' and '),
+    evidence: pickBestEvidence(l.evidences),
   }))
 }
 

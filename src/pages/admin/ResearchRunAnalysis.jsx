@@ -218,10 +218,34 @@ function ParsedRolesPanel({ roles }) {
   )
 }
 
+function buildSupportingEvidenceByLabel(classifications, roles) {
+  const byLabel = {}
+  for (const row of Array.isArray(classifications) ? classifications : []) {
+    const roleIndex = Number(row?.role_index)
+    if (!Number.isFinite(roleIndex)) continue
+    const role = Array.isArray(roles) ? roles[roleIndex] : null
+    for (const label of Array.isArray(row?.labels) ? row.labels : []) {
+      const labelName = (label?.name || '').trim()
+      const evidence = (label?.evidence || '').trim()
+      if (!labelName || !evidence) continue
+      if (!byLabel[labelName]) byLabel[labelName] = []
+      byLabel[labelName].push({
+        role_index: roleIndex,
+        role_title: role?.title || `Role ${roleIndex + 1}`,
+        employer: role?.employer || '',
+        evidence,
+      })
+    }
+  }
+  return byLabel
+}
+
 // ─── Role label table ─────────────────────────────────────────────────────────
 
-function ResultColumn({ result, loading, error, variant }) {
+function ResultColumn({ result, classifications, roles, loading, error, variant }) {
   const { label, accent } = variant
+  const [showSupport, setShowSupport] = useState(false)
+  const supportByLabel = buildSupportingEvidenceByLabel(classifications, roles)
   return (
     <div style={{ flex: 1, minWidth: 200, borderTop: `2px solid ${accent}`, paddingTop: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -241,7 +265,7 @@ function ResultColumn({ result, loading, error, variant }) {
             <div style={{ color: '#706050' }}>{result.strengths}</div>
           </div>
           <div>
-            <div style={{ ...label9, marginBottom: 8 }}>Function levels</div>
+            <div style={{ ...label9, marginBottom: 8 }}>Function levels (canonical evidence)</div>
             {(result.functions || []).map((fn, i) => (
               <div key={i} style={{ paddingLeft: 10, borderLeft: `2px solid ${accent}`, marginBottom: 8 }}>
                 <div style={{ fontWeight: 700 }}>
@@ -249,8 +273,34 @@ function ResultColumn({ result, loading, error, variant }) {
                   <span style={{ fontWeight: 400, color: '#a09080', marginLeft: 6, fontSize: 11 }}>{m2y(fn.months)}y</span>
                 </div>
                 <div style={{ fontSize: 10, color: '#706050', marginTop: 2 }}>{fn.evidence}</div>
+                {showSupport && (
+                  <div style={{ marginTop: 6, border: '1px solid #ede8e2', borderRadius: 4, background: '#faf8f5', padding: '6px 8px' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#a09080', marginBottom: 4 }}>
+                      Supporting role evidence (diagnostic)
+                    </div>
+                    {(supportByLabel[fn.name] || []).length === 0 ? (
+                      <div style={{ fontSize: 10, color: '#a09080' }}>No supporting role evidence rows for this label.</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {(supportByLabel[fn.name] || []).map((s, idx) => (
+                          <div key={`${fn.name}-support-${idx}`} style={{ fontSize: 10, color: '#706050', lineHeight: 1.5 }}>
+                            <strong style={{ color: '#1a1410' }}>{s.role_title}</strong>{s.employer ? ` (${s.employer})` : ''}: {s.evidence}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
+            {(result.functions || []).length > 0 && (
+              <button
+                onClick={() => setShowSupport(s => !s)}
+                style={{ marginTop: 6, border: '1px solid #d8d0c4', background: 'white', color: '#706050', borderRadius: 4, padding: '5px 8px', fontSize: 10, cursor: 'pointer' }}
+              >
+                {showSupport ? 'Hide supporting role evidence' : 'Show supporting role evidence (diagnostic)'}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -291,6 +341,8 @@ function ResumeResult({ resume, runState }) {
             key={v.key}
             variant={v}
             result={results[v.key]}
+            classifications={classifications[v.key]}
+            roles={roles}
             loading={loading[v.key]}
             error={errors[v.key]}
           />

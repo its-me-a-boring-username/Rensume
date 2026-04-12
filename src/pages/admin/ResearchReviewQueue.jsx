@@ -68,6 +68,16 @@ function normalizeReviewItems(classifications) {
   return items
 }
 
+function normalizeCanonicalFunctions(functions) {
+  return (Array.isArray(functions) ? functions : [])
+    .map((fn) => ({
+      label_name: (fn?.name || "").trim(),
+      evidence_text: (fn?.evidence || "").trim(),
+      months: Number(fn?.months) || 0,
+    }))
+    .filter((fn) => fn.label_name)
+}
+
 function summarizeParentRating(items, itemState) {
   const ratings = items
     .map((item) => itemState[`${item.role_index}::${item.label_name}`]?.rating || "")
@@ -174,7 +184,7 @@ export default function ResearchReviewQueue() {
       if (runIds.length) {
         const resultQuery = await supabase
           .from("research_run_results")
-          .select("id, run_id, variant_key, variant_label, model_label, classifications")
+          .select("id, run_id, variant_key, variant_label, model_label, classifications, functions")
           .in("run_id", runIds)
         if (!resultQuery.error) resultRows = resultQuery.data || []
       }
@@ -226,7 +236,7 @@ export default function ResearchReviewQueue() {
     for (const run of runs) {
       const runResults = resultsByRun[run.id] || []
       for (const rr of runResults) {
-        const totalItems = normalizeReviewItems(rr.classifications).length
+        const totalItems = normalizeCanonicalFunctions(rr.functions).length
         const review = reviewsByResultId[rr.id]
         rows.push({
           run_id: run.id,
@@ -257,6 +267,10 @@ export default function ResearchReviewQueue() {
 
   const normalizedItems = useMemo(
     () => normalizeReviewItems(selectedContext?.result?.classifications),
+    [selectedContext],
+  )
+  const canonicalFunctions = useMemo(
+    () => normalizeCanonicalFunctions(selectedContext?.result?.functions),
     [selectedContext],
   )
 
@@ -298,7 +312,7 @@ export default function ResearchReviewQueue() {
         setItemState(mapped)
         const parent = {}
         const missed = {}
-        const labels = [...new Set(normalizedItems.map((i) => i.label_name))]
+        const labels = [...new Set(canonicalFunctions.map((i) => i.label_name))]
         for (const label of labels) {
           const labelItems = normalizedItems.filter((i) => i.label_name === label)
           parent[label] = summarizeParentRating(labelItems, mapped)
@@ -314,12 +328,12 @@ export default function ResearchReviewQueue() {
     }
     loadReviewItems()
     return () => { cancelled = true }
-  }, [selectedContext, schemaMissing, reviewsByResultId, normalizedItems])
+  }, [selectedContext, schemaMissing, reviewsByResultId, normalizedItems, canonicalFunctions])
 
   const parsedRoles = useMemo(() => getParsedRoles(selectedContext?.run), [selectedContext])
   const resumeText = useMemo(() => getResumeText(selectedContext?.run), [selectedContext])
 
-  const functionBuckets = useMemo(() => {
+  const supportItemsByFunction = useMemo(() => {
     const map = {}
     for (const item of normalizedItems) {
       const key = item.label_name
@@ -329,9 +343,10 @@ export default function ResearchReviewQueue() {
     return map
   }, [normalizedItems])
 
-  const functionLabels = useMemo(
-    () => Object.keys(functionBuckets).sort((a, b) => a.localeCompare(b)),
-    [functionBuckets],
+  const functionLabels = useMemo(() => canonicalFunctions.map((f) => f.label_name), [canonicalFunctions])
+  const canonicalByLabel = useMemo(
+    () => Object.fromEntries(canonicalFunctions.map((f) => [f.label_name, f])),
+    [canonicalFunctions],
   )
 
   const resolvedFunctionCount = useMemo(() => {
@@ -343,7 +358,8 @@ export default function ResearchReviewQueue() {
         continue
       }
       if (parent === "partially_accurate" || parent === "inaccurate") {
-        const allChildrenRated = functionBuckets[label].every((item) => {
+        const children = supportItemsByFunction[label] || []
+        const allChildrenRated = children.every((item) => {
           const key = `${item.role_index}::${item.label_name}`
           return Boolean(itemState[key]?.rating)
         })
@@ -351,7 +367,7 @@ export default function ResearchReviewQueue() {
       }
     }
     return done
-  }, [functionLabels, functionBuckets, itemState, parentRatings])
+  }, [functionLabels, supportItemsByFunction, itemState, parentRatings])
 
   const coveragePct = functionLabels.length ? (resolvedFunctionCount / functionLabels.length) * 100 : 0
 
@@ -376,7 +392,7 @@ export default function ResearchReviewQueue() {
   const setParentRating = (labelName, rating) => {
     setParentRatings((prev) => ({ ...prev, [labelName]: rating }))
     if (rating !== "accurate") return
-    const children = functionBuckets[labelName] || []
+    const children = supportItemsByFunction[labelName] || []
     const keepMissedEvidence = Boolean(parentMissedEvidence[labelName])
     setItemState((prev) => {
       const next = { ...prev }
@@ -606,7 +622,8 @@ export default function ResearchReviewQueue() {
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       {functionLabels.map((labelName) => {
-                        const items = functionBuckets[labelName] || []
+                        const items = supportItemsByFunction[labelName] || []
+                        const canonicalEvidence = canonicalByLabel[labelName]?.evidence_text || ""
                         const parent = parentRatings[labelName] || ""
                         const showRoleEscalation = parent === "partially_accurate" || parent === "inaccurate"
                         const roleResolved = showRoleEscalation
@@ -617,8 +634,12 @@ export default function ResearchReviewQueue() {
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
                               <div>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1410" }}>{labelName}</div>
-                                <div style={{ fontSize: 10, color: "#a09080" }}>{items.length} role evidence point{items.length === 1 ? "" : "s"} • {roleResolved ? "Resolved" : "Needs review"}</div>
+                                <div style={{ fontSize: 10, color: "#a09080" }}>{items.length} supporting role evidence point{items.length === 1 ? "" : "s"} • {roleResolved ? "Resolved" : "Needs review"}</div>
                               </div>
+                            </div>
+
+                            <div style={{ fontSize: 10, color: "#706050", lineHeight: 1.6, border: "1px solid #ede8e2", borderRadius: 4, background: "white", padding: "6px 7px", marginBottom: 7 }}>
+                              <strong style={{ color: "#1a1410" }}>Canonical function evidence:</strong> {canonicalEvidence || "No canonical evidence recorded"}
                             </div>
 
                             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 7 }}>
@@ -660,7 +681,7 @@ export default function ResearchReviewQueue() {
                                   style={{ fontSize: 10, color: "#706050", lineHeight: 1.6, cursor: "pointer", border: "1px solid #ede8e2", borderRadius: 4, padding: "6px 7px", background: "white" }}
                                   title="Click to highlight this evidence in source text"
                                 >
-                                  <strong style={{ color: "#1a1410" }}>Role {item.role_index + 1}:</strong> {item.evidence_text || "No evidence text recorded"}
+                                  <strong style={{ color: "#1a1410" }}>Role {item.role_index + 1} supporting evidence:</strong> {item.evidence_text || "No evidence text recorded"}
                                 </div>
                               ))}
                             </div>
