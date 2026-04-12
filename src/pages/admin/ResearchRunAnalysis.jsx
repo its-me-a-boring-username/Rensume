@@ -6,9 +6,10 @@ import { useState, useEffect } from "react"
 import { supabase } from "../../lib/supabase.js"
 import {
   AVAILABLE_MODELS, CLASSIFICATION_RULES, EVIDENCE_INSTRUCTIONS,
-  EXTRACT_PROMPTS, FN_DEFINITIONS, DEFAULT_SETTINGS, ALL_FN_NAMES,
+  EXTRACT_PROMPTS, FN_DEFINITIONS, DEFAULT_SETTINGS,
   classifyRoles, getSummary, aggregateLabels, m2y, seniority,
 } from "../../lib/researchClassifier.js"
+import RoleLabelDotTable from "../../components/RoleLabelDotTable.jsx"
 
 const ACCENT_COLORS = ['#904060','#3a6aaa','#c07030','#2a7a6a','#7a3aaa','#aa6a2a','#3aaa6a','#aa3a3a']
 
@@ -219,90 +220,6 @@ function ParsedRolesPanel({ roles }) {
 
 // ─── Role label table ─────────────────────────────────────────────────────────
 
-function RoleLabelTable({ roles, classifications, activeVariants }) {
-  if (!roles || !activeVariants.length) return null
-  if (!activeVariants.some(v => classifications[v.key])) return null
-
-  const visibleRoles = roles.filter(r => !r.flagged)
-  const labelSet = (classifs, roleIdx) => {
-    if (!classifs) return new Set()
-    const entry = classifs.find(c => c.role_index === roleIdx)
-    return new Set((entry?.labels || []).map(l => l.name))
-  }
-
-  const thStyle = {
-    padding: '6px 10px', fontSize: 9, fontWeight: 700, letterSpacing: '.1em',
-    textTransform: 'uppercase', color: '#a09080', borderBottom: '1px solid #ede8e2',
-    whiteSpace: 'nowrap', textAlign: 'left', background: '#faf8f5',
-  }
-  const tdStyle = { padding: '6px 10px', fontSize: 11, borderBottom: '1px solid #ede8e2', verticalAlign: 'middle' }
-  const dot = (present, accent) => ({
-    display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
-    background: present ? accent : '#e0dbd4',
-  })
-
-  return (
-    <div style={{ marginBottom: 32 }}>
-      <div style={{ ...label9, marginBottom: 10 }}>Role-level label assignments</div>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', border: '1px solid #ede8e2', borderRadius: 6, overflow: 'hidden', minWidth: '100%' }}>
-          <thead>
-            <tr>
-              <th style={{ ...thStyle, minWidth: 180 }}>Role</th>
-              <th style={{ ...thStyle, minWidth: 40 }}>Mo</th>
-              {ALL_FN_NAMES.map(fn => (
-                <th key={fn} style={{ ...thStyle, minWidth: 100 }}>
-                  {fn.replace('Processing ', 'Proc. ').replace('Strategic ', 'Strat. ')}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {visibleRoles.map((role, i) => {
-              const sets = activeVariants.reduce((acc, v) => {
-                acc[v.key] = labelSet(classifications[v.key], i)
-                return acc
-              }, {})
-              return (
-                <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#faf8f5' }}>
-                  <td style={tdStyle}>
-                    <div style={{ fontWeight: 700, fontSize: 11 }}>{role.title}</div>
-                    <div style={{ color: '#a09080', fontSize: 10 }}>{role.employer}</div>
-                  </td>
-                  <td style={{ ...tdStyle, color: '#a09080', fontSize: 10 }}>{role.months}</td>
-                  {ALL_FN_NAMES.map(fn => (
-                    <td key={fn} style={{ ...tdStyle, textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: 3, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
-                        {activeVariants.map(v => (
-                          <span key={v.key} title={v.label} style={dot(sets[v.key]?.has(fn), v.accent)} />
-                        ))}
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-        <div style={{ fontSize: 10, color: '#a09080', marginTop: 6, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-          {activeVariants.map(v => (
-            <span key={v.key}>
-              <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: v.accent, marginRight: 4 }} />
-              {v.label}
-            </span>
-          ))}
-          <span>
-            <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#e0dbd4', marginRight: 4 }} />
-            Not assigned
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Result column ────────────────────────────────────────────────────────────
-
 function ResultColumn({ result, loading, error, variant }) {
   const { label, accent } = variant
   return (
@@ -362,7 +279,7 @@ function ResumeResult({ resume, runState }) {
         )}
       </div>
       <ParsedRolesPanel roles={roles} />
-      <RoleLabelTable roles={roles} classifications={classifications} activeVariants={activeVariants} />
+      <RoleLabelDotTable roles={roles} classificationsByVariant={classifications} activeVariants={activeVariants} />
       <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
         {activeVariants.map(v => (
           <ResultColumn
@@ -461,10 +378,26 @@ export default function ResearchRunAnalysis() {
         .filter(([, r]) => r)
         .map(([variantKey, r]) => {
           const variant = variants.find(v => v.key === variantKey)
+          const modelDef = AVAILABLE_MODELS.find(m => m.key === variant?.modelKey)
+          const variantLabel = [
+            variant?.label || variantKey,
+            CLASSIFICATION_RULES.find(x => x.key === componentKeys.rulesKey)?.name || componentKeys.rulesKey,
+            EVIDENCE_INSTRUCTIONS.find(x => x.key === componentKeys.evidenceKey)?.name || componentKeys.evidenceKey,
+            EXTRACT_PROMPTS.find(x => x.key === componentKeys.extractKey)?.name || componentKeys.extractKey,
+            FN_DEFINITIONS.find(x => x.key === componentKeys.fnDefsKey)?.name || componentKeys.fnDefsKey,
+          ].join(" | ")
           return {
             run_id:          run.id,
             variant_key:     variantKey,
             model_string:    variant?.model || '',
+            model_key:       variant?.modelKey || '',
+            model_label:     modelDef?.label || '',
+            blind_mode:      Boolean(variant?.blind),
+            rules_key:       componentKeys.rulesKey,
+            evidence_key:    componentKeys.evidenceKey,
+            extract_key:     componentKeys.extractKey,
+            fn_defs_key:     componentKeys.fnDefsKey,
+            variant_label:   variantLabel,
             classifications: r.classifications || [],
             summary:         r.summary || '',
             strengths:       r.strengths || '',
@@ -473,9 +406,24 @@ export default function ResearchRunAnalysis() {
         })
 
       if (resultRows.length > 0) {
-        const { error: resultsErr } = await supabase
+        let { error: resultsErr } = await supabase
           .from('research_run_results')
           .insert(resultRows)
+        if (resultsErr && /column|schema|variant_label|model_key|blind_mode/i.test(resultsErr.message || '')) {
+          const legacyRows = resultRows.map(r => ({
+            run_id: r.run_id,
+            variant_key: r.variant_key,
+            model_string: r.model_string,
+            classifications: r.classifications,
+            summary: r.summary,
+            strengths: r.strengths,
+            functions: r.functions,
+          }))
+          const legacyInsert = await supabase
+            .from('research_run_results')
+            .insert(legacyRows)
+          resultsErr = legacyInsert.error
+        }
         if (resultsErr) throw resultsErr
       }
 
@@ -641,3 +589,5 @@ export default function ResearchRunAnalysis() {
     </div>
   )
 }
+
+
