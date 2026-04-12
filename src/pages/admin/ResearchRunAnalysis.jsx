@@ -261,7 +261,7 @@ function ResultColumn({ result, loading, error, variant }) {
 // ─── Results for one resume ───────────────────────────────────────────────────
 
 function ResumeResult({ resume, runState }) {
-  const { roles, classifications, results, loading, errors, activeVariants, saved, saveError } = runState
+  const { roles, classifications, results, loading, errors, activeVariants, saved, saveError, calibrationByRoleIndex } = runState
   const anyLoading = Object.values(loading).some(Boolean)
 
   return (
@@ -279,7 +279,12 @@ function ResumeResult({ resume, runState }) {
         )}
       </div>
       <ParsedRolesPanel roles={roles} />
-      <RoleLabelDotTable roles={roles} classificationsByVariant={classifications} activeVariants={activeVariants} />
+      <RoleLabelDotTable
+        roles={roles}
+        classificationsByVariant={classifications}
+        activeVariants={activeVariants}
+        calibrationByRoleIndex={calibrationByRoleIndex}
+      />
       <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
         {activeVariants.map(v => (
           <ResultColumn
@@ -349,6 +354,22 @@ export default function ResearchRunAnalysis() {
       const patch = typeof patchOrFn === 'function' ? patchOrFn(current) : patchOrFn
       return { ...prev, [resumeId]: { ...current, ...patch } }
     })
+  }
+
+  const fetchCalibrationByRoleIndex = async (resumeId) => {
+    const { data, error } = await supabase
+      .from('research_calibrations')
+      .select('role_index, labels')
+      .eq('resume_id', resumeId)
+
+    if (error || !Array.isArray(data)) return {}
+
+    return data.reduce((acc, row) => {
+      const idx = Number(row?.role_index)
+      if (!Number.isFinite(idx)) return acc
+      acc[idx] = Array.isArray(row?.labels) ? row.labels : []
+      return acc
+    }, {})
   }
 
   const saveRunToSupabase = async (resumeId, parsedRoles, variantResults, components, variants) => {
@@ -436,11 +457,13 @@ export default function ResearchRunAnalysis() {
   const runResume = async (resume, variants, components) => {
     const resumeId   = resume.id
     const parsedRoles = resume.parsed_roles
+    const calibrationByRoleIndex = await fetchCalibrationByRoleIndex(resumeId)
 
     // Initialise state for this resume
     const initLoading = variants.reduce((acc, v) => ({ ...acc, [v.key]: true }), {})
     updateRunState(resumeId, {
       roles: parsedRoles,
+      calibrationByRoleIndex,
       activeVariants: variants,
       classifications: {},
       results: {},
