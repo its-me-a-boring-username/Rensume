@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rensume Review Mockup (Hybrid)</title>
+    <style>
+      :root {
+        --bg: #f6f3ef;
+        --panel: #ffffff;
+        --border: #e0dbd4;
+        --muted: #8a7c6e;
+        --text: #1a1410;
+        --accent: #904060;
+        --good: #2a7a6a;
+        --warn: #c07030;
+        --bad: #c04060;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      .page {
+        max-width: 1420px;
+        margin: 0 auto;
+        padding: 24px 24px 40px;
+      }
+      .top {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin-bottom: 14px;
+      }
+      .title {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0 0 4px;
+      }
+      .sub { color: #635547; font-size: 12px; }
+      .meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+      .pill {
+        border: 1px solid var(--border);
+        background: #faf8f5;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 11px;
+        color: #5f5143;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 14px;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        min-height: 680px;
+      }
+      .panel-head {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .eyebrow {
+        font-size: 9px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: #a09080;
+        font-weight: 700;
+      }
+      .search {
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 6px 8px;
+        width: 240px;
+        font-size: 11px;
+      }
+
+      .resume-scroll, .review-scroll {
+        max-height: 620px;
+        overflow: auto;
+        padding: 12px;
+      }
+      .role {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 10px;
+        background: #faf8f5;
+      }
+      .role.active {
+        border-color: #f5d87a;
+        background: #fff8e6;
+      }
+      .role h4 {
+        margin: 0 0 4px;
+        font-size: 13px;
+      }
+      .role-meta {
+        color: var(--muted);
+        font-size: 10px;
+        margin-bottom: 8px;
+      }
+      .role p {
+        margin: 0;
+        line-height: 1.55;
+        font-size: 11px;
+      }
+      mark { background: #fff3bf; padding: 1px 2px; }
+
+      .function-card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 10px;
+        background: #faf8f5;
+      }
+      .function-top {
+        padding: 10px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .fn-title {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .fn-sub {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .quick {
+        border: 1px solid var(--border);
+        background: #fff;
+        border-radius: 5px;
+        padding: 3px 8px;
+        font-size: 10px;
+        color: #655749;
+      }
+
+      .evidence {
+        padding: 10px;
+        display: grid;
+        gap: 8px;
+      }
+      .quote {
+        border: 1px dashed #dbcfc2;
+        background: #fff;
+        border-radius: 6px;
+        padding: 8px;
+        font-size: 10px;
+        color: #5d4f40;
+      }
+      .quote strong { color: #1a1410; }
+
+      .rates {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .rate {
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: #fff;
+        padding: 4px 10px;
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .rate.good { border-color: var(--good); color: var(--good); }
+      .rate.warn { border-color: var(--warn); color: var(--warn); }
+      .rate.bad { border-color: var(--bad); color: var(--bad); }
+
+      .escalation {
+        margin: 0 10px 10px;
+        border: 1px solid #f0d4dc;
+        border-radius: 7px;
+        background: #fff8fb;
+        padding: 8px;
+      }
+      .escalation h5 {
+        margin: 0 0 6px;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: var(--bad);
+      }
+      .row-rate {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+      .row-rate span {
+        font-size: 10px;
+        color: #5d4f40;
+      }
+
+      .flags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      .flag {
+        border: 1px solid #dcb0be;
+        border-radius: 999px;
+        padding: 2px 7px;
+        font-size: 9px;
+        color: #904060;
+        background: #fff;
+      }
+
+      .sticky {
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        border-top: 1px solid var(--border);
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .progress {
+        font-size: 11px;
+        color: #5f5143;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+      }
+      button {
+        border-radius: 5px;
+        border: 1px solid var(--border);
+        background: #fff;
+        color: #655749;
+        font-size: 11px;
+        padding: 7px 10px;
+      }
+      .primary {
+        border: none;
+        background: var(--accent);
+        color: #fff;
+      }
+      .primary.disabled {
+        background: #d9d0c6;
+        color: #8a7c6e;
+      }
+
+      @media (max-width: 1180px) {
+        .layout { grid-template-columns: 1fr; }
+        .panel { min-height: 520px; }
+        .resume-scroll, .review-scroll { max-height: 460px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <section class="top">
+        <h1 class="title">Hybrid Evidence Review (Mockup)</h1>
+        <div class="sub">Function-level first to reduce effort. Role-level review only for partial/inaccurate/flagged cases.</div>
+        <div class="meta">
+          <span class="pill">Resume: OLK</span>
+          <span class="pill">Run ID: EDB0A098</span>
+          <span class="pill">Variant: Sonnet 4 | v1 Standard | v9 Rich Best</span>
+          <span class="pill">Reviewer: ana@rensume.ai</span>
+          <span class="pill">Status: Draft</span>
+        </div>
+      </section>
+
+      <div class="layout">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="eyebrow">Source Resume Text (Left)</div>
+            <input class="search" value="Search phrase from selected evidence..." />
+          </div>
+          <div class="resume-scroll">
+            <article class="role active">
+              <h4>Senior Operations Lead</h4>
+              <div class="role-meta">Acme Financial • 2021–Present • Role 2</div>
+              <p>
+                Led cross-functional redesign of onboarding workflows across risk, compliance, and support.
+                Built KPI dashboards, reduced approval cycle time by <mark>38%</mark>, and introduced quarterly
+                planning with leadership.
+              </p>
+            </article>
+            <article class="role">
+              <h4>Operations Manager</h4>
+              <div class="role-meta">Atlas Payments • 2018–2021 • Role 1</div>
+              <p>
+                Managed team of 7 analysts, standardized case triage, and partnered with product on process
+                instrumentation. Created SOP framework for incident response and vendor escalations.
+              </p>
+            </article>
+            <article class="role">
+              <h4>Process Analyst</h4>
+              <div class="role-meta">Atlas Payments • 2016–2018 • Role 0</div>
+              <p>
+                Documented current-state processes, identified bottlenecks, and piloted intake forms for
+                internal request routing. Delivered monthly ops reporting for leadership review.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="eyebrow">Function-Level Review (Right)</div>
+            <span class="pill">Escalations open: 2</span>
+          </div>
+          <div class="review-scroll">
+            <article class="function-card">
+              <div class="function-top">
+                <div>
+                  <h3 class="fn-title">Strategic Manager</h3>
+                  <div class="fn-sub">Bundle: 3 evidence points across 2 roles</div>
+                </div>
+                <button class="quick">Jump to strongest evidence</button>
+              </div>
+              <div class="evidence">
+                <div class="quote"><strong>Role 2:</strong> "introduced quarterly planning with leadership"</div>
+                <div class="quote"><strong>Role 2:</strong> "led cross-functional redesign of onboarding workflows"</div>
+                <div class="quote"><strong>Role 1:</strong> "partnered with product on process instrumentation"</div>
+                <div class="rates">
+                  <button class="rate good">Accurate</button>
+                  <button class="rate">Partially Accurate</button>
+                  <button class="rate">Inaccurate</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="function-card">
+              <div class="function-top">
+                <div>
+                  <h3 class="fn-title">People Manager</h3>
+                  <div class="fn-sub">Bundle: 2 evidence points across 1 role</div>
+                </div>
+                <button class="quick">Jump to strongest evidence</button>
+              </div>
+              <div class="evidence">
+                <div class="quote"><strong>Role 1:</strong> "managed team of 7 analysts"</div>
+                <div class="quote"><strong>Role 1:</strong> "created SOP framework for incident response"</div>
+                <div class="rates">
+                  <button class="rate">Accurate</button>
+                  <button class="rate warn">Partially Accurate</button>
+                  <button class="rate">Inaccurate</button>
+                </div>
+              </div>
+              <div class="escalation">
+                <h5>Role-Level Escalation (Required for Partial/Inaccurate)</h5>
+                <div class="row-rate">
+                  <span>Role 1 quote quality and role alignment</span>
+                  <div class="rates">
+                    <button class="rate good">Accurate</button>
+                    <button class="rate">Partial</button>
+                    <button class="rate">Inaccurate</button>
+                  </div>
+                </div>
+                <div class="flags">
+                  <span class="flag">Hallucinated Evidence</span>
+                  <span class="flag">Misleading Quote</span>
+                  <span class="flag">Incomplete Evidence</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="function-card">
+              <div class="function-top">
+                <div>
+                  <h3 class="fn-title">Process Specialist</h3>
+                  <div class="fn-sub">Bundle: 2 evidence points across 2 roles</div>
+                </div>
+                <button class="quick">Jump to strongest evidence</button>
+              </div>
+              <div class="evidence">
+                <div class="quote"><strong>Role 0:</strong> "documented current-state processes"</div>
+                <div class="quote"><strong>Role 2:</strong> "reduced approval cycle time by 38%"</div>
+                <div class="rates">
+                  <button class="rate">Accurate</button>
+                  <button class="rate">Partially Accurate</button>
+                  <button class="rate bad">Inaccurate</button>
+                </div>
+              </div>
+              <div class="escalation">
+                <h5>Role-Level Escalation (Required for Partial/Inaccurate)</h5>
+                <div class="row-rate">
+                  <span>Role 0 quote relevance</span>
+                  <div class="rates">
+                    <button class="rate">Accurate</button>
+                    <button class="rate warn">Partial</button>
+                    <button class="rate">Inaccurate</button>
+                  </div>
+                </div>
+                <div class="row-rate">
+                  <span>Role 2 quote relevance</span>
+                  <div class="rates">
+                    <button class="rate">Accurate</button>
+                    <button class="rate">Partial</button>
+                    <button class="rate bad">Inaccurate</button>
+                  </div>
+                </div>
+                <div class="flags">
+                  <span class="flag">Misleading Quote</span>
+                </div>
+              </div>
+            </article>
+          </div>
+          <div class="sticky">
+            <div class="progress">Coverage: 2 / 3 functions rated • 1 escalation unresolved</div>
+            <div class="actions">
+              <button>Save Draft</button>
+              <button class="primary disabled">Finalize (Locked)</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </body>
+</html>

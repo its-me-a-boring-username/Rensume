@@ -67,6 +67,17 @@ function normalizeReviewItems(classifications) {
   return items
 }
 
+function summarizeParentRating(items, itemState) {
+  const ratings = items
+    .map((item) => itemState[`${item.role_index}::${item.label_name}`]?.rating || "")
+    .filter(Boolean)
+  if (!ratings.length) return ""
+  if (ratings.every((r) => r === "accurate")) return "accurate"
+  if (ratings.some((r) => r === "partially_accurate")) return "partially_accurate"
+  if (ratings.every((r) => r === "inaccurate")) return "inaccurate"
+  return "partially_accurate"
+}
+
 function markText(text, needle) {
   const source = String(text || "")
   const q = String(needle || "").trim()
@@ -120,6 +131,7 @@ export default function ResearchReviewQueue() {
 
   const [reviewRow, setReviewRow] = useState(null)
   const [itemState, setItemState] = useState({})
+  const [parentRatings, setParentRatings] = useState({})
 
   useEffect(() => {
     let cancelled = false
@@ -251,6 +263,7 @@ export default function ResearchReviewQueue() {
     setHighlightPhrase("")
     setReviewRow(null)
     setItemState({})
+    setParentRatings({})
   }, [selectedResultId])
 
   useEffect(() => {
@@ -280,32 +293,59 @@ export default function ResearchReviewQueue() {
       if (!cancelled) {
         setReviewRow(existingReview)
         setItemState(mapped)
+        const parent = {}
+        const labels = [...new Set(normalizedItems.map((i) => i.label_name))]
+        for (const label of labels) {
+          parent[label] = summarizeParentRating(
+            normalizedItems.filter((i) => i.label_name === label),
+            mapped,
+          )
+        }
+        setParentRatings(parent)
       }
     }
     loadReviewItems()
     return () => { cancelled = true }
-  }, [selectedContext, schemaMissing, reviewsByResultId])
+  }, [selectedContext, schemaMissing, reviewsByResultId, normalizedItems])
 
   const parsedRoles = useMemo(() => getParsedRoles(selectedContext?.run), [selectedContext])
   const resumeText = useMemo(() => getResumeText(selectedContext?.run), [selectedContext])
 
-  const roleBuckets = useMemo(() => {
+  const functionBuckets = useMemo(() => {
     const map = {}
     for (const item of normalizedItems) {
-      const key = item.role_index
+      const key = item.label_name
       if (!map[key]) map[key] = []
       map[key].push(item)
     }
     return map
   }, [normalizedItems])
 
-  const reviewedCount = useMemo(() => {
-    return normalizedItems.reduce((sum, item) => {
-      const key = `${item.role_index}::${item.label_name}`
-      return sum + (itemState[key]?.rating ? 1 : 0)
-    }, 0)
-  }, [normalizedItems, itemState])
-  const coveragePct = normalizedItems.length ? (reviewedCount / normalizedItems.length) * 100 : 0
+  const functionLabels = useMemo(
+    () => Object.keys(functionBuckets).sort((a, b) => a.localeCompare(b)),
+    [functionBuckets],
+  )
+
+  const resolvedFunctionCount = useMemo(() => {
+    let done = 0
+    for (const label of functionLabels) {
+      const parent = parentRatings[label] || ""
+      if (parent === "accurate") {
+        done += 1
+        continue
+      }
+      if (parent === "partially_accurate" || parent === "inaccurate") {
+        const allChildrenRated = functionBuckets[label].every((item) => {
+          const key = `${item.role_index}::${item.label_name}`
+          return Boolean(itemState[key]?.rating)
+        })
+        if (allChildrenRated) done += 1
+      }
+    }
+    return done
+  }, [functionLabels, functionBuckets, itemState, parentRatings])
+
+  const coveragePct = functionLabels.length ? (resolvedFunctionCount / functionLabels.length) * 100 : 0
 
   const setRating = (roleIndex, labelName, rating) => {
     const key = `${roleIndex}::${labelName}`
@@ -323,6 +363,20 @@ export default function ResearchReviewQueue() {
   const setNote = (roleIndex, labelName, note) => {
     const key = `${roleIndex}::${labelName}`
     setItemState((prev) => ({ ...prev, [key]: { ...(prev[key] || {}), note } }))
+  }
+
+  const setParentRating = (labelName, rating) => {
+    setParentRatings((prev) => ({ ...prev, [labelName]: rating }))
+    if (rating !== "accurate") return
+    const children = functionBuckets[labelName] || []
+    setItemState((prev) => {
+      const next = { ...prev }
+      for (const item of children) {
+        const key = `${item.role_index}::${item.label_name}`
+        next[key] = { ...(next[key] || {}), rating: "accurate", flags: [], note: "" }
+      }
+      return next
+    })
   }
 
   const persist = async (nextStatus = "draft") => {
@@ -356,6 +410,10 @@ export default function ResearchReviewQueue() {
       const rows = normalizedItems.map((item) => {
         const key = `${item.role_index}::${item.label_name}`
         const local = itemState[key] || {}
+        const parent = parentRatings[item.label_name] || ""
+        const effectiveRating = parent === "accurate" ? "accurate" : (local.rating || null)
+        const effectiveFlags = parent === "accurate" ? [] : (Array.isArray(local.flags) ? local.flags : [])
+        const effectiveNote = parent === "accurate" ? null : (local.note || null)
         return {
           variant_review_id: vr.id,
           role_index: item.role_index,
@@ -363,9 +421,9 @@ export default function ResearchReviewQueue() {
           label_family: "function",
           review_aspect: "evidence",
           evidence_text: item.evidence_text || local.evidence_text || "",
-          rating: local.rating || null,
-          flags: Array.isArray(local.flags) ? local.flags : [],
-          note: local.note || null,
+          rating: effectiveRating,
+          flags: effectiveFlags,
+          note: effectiveNote,
         }
       })
       if (rows.length) {
@@ -393,8 +451,8 @@ export default function ResearchReviewQueue() {
   }
 
   const handleFinalize = async () => {
-    if (reviewedCount < normalizedItems.length) {
-      setSaveError("All labels need a rating before finalizing.")
+    if (resolvedFunctionCount < functionLabels.length) {
+      setSaveError("Complete each function rating (and role-level details for partial/inaccurate) before finalizing.")
       return
     }
     await persist("finalized")
@@ -482,7 +540,7 @@ export default function ResearchReviewQueue() {
               </div>
 
               <div style={{ marginBottom: 10, fontSize: 11, color: "#706050" }}>
-                Coverage: <strong>{reviewedCount}/{normalizedItems.length}</strong> ({coveragePct.toFixed(1)}%) • Status: <strong>{reviewRow?.status || "draft"}</strong>
+                Coverage: <strong>{resolvedFunctionCount}/{functionLabels.length}</strong> functions resolved ({coveragePct.toFixed(1)}%) • Status: <strong>{reviewRow?.status || "draft"}</strong>
                 {reviewRow?.updated_at ? <> • Last saved: {formatDate(reviewRow.updated_at)}</> : null}
               </div>
               {saveError ? (
@@ -519,91 +577,122 @@ export default function ResearchReviewQueue() {
                 </div>
 
                 <div style={{ background: "white", border: "1px solid #e0dbd4", borderRadius: 6, padding: "10px 12px", maxHeight: "calc(100vh - 320px)", overflowY: "auto" }}>
-                  <div style={{ ...label9, marginBottom: 8 }}>Evidence Ratings</div>
-                  {Object.keys(roleBuckets).length === 0 ? (
+                  <div style={{ ...label9, marginBottom: 8 }}>Function-Level Evidence Ratings (Hybrid)</div>
+                  {functionLabels.length === 0 ? (
                     <div style={{ fontSize: 11, color: "#a09080" }}>No labels to review for this variant.</div>
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                      {Object.entries(roleBuckets)
-                        .sort((a, b) => Number(a[0]) - Number(b[0]))
-                        .map(([roleIdx, labels]) => {
-                          const i = Number(roleIdx)
-                          const role = parsedRoles[i] || {}
-                          return (
-                            <div key={`role-bucket-${roleIdx}`} style={{ border: "1px solid #ede8e2", borderRadius: 6, padding: "8px 9px", background: "#faf8f5" }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1410" }}>{role.title || `Role ${i + 1}`}</div>
-                                <button
-                                  onClick={() => {
-                                    setSelectedRoleIndex(i)
-                                    const target = roleRefs.current[i]
-                                    if (target) target.scrollIntoView({ behavior: "smooth", block: "center" })
-                                  }}
-                                  style={{ border: "1px solid #d8d0c4", background: "white", color: "#706050", borderRadius: 4, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}
-                                >
-                                  Jump to text
-                                </button>
-                              </div>
-
-                              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                                {labels.map((item) => {
-                                  const key = `${item.role_index}::${item.label_name}`
-                                  const local = itemState[key] || {}
-                                  return (
-                                    <div key={key} style={{ background: "white", border: "1px solid #ede8e2", borderRadius: 6, padding: "7px 8px" }}>
-                                      <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1410", marginBottom: 4 }}>{item.label_name}</div>
-                                      <div
-                                        onClick={() => {
-                                          setSelectedRoleIndex(item.role_index)
-                                          setHighlightPhrase(item.evidence_text)
-                                          const target = roleRefs.current[item.role_index]
-                                          if (target) target.scrollIntoView({ behavior: "smooth", block: "center" })
-                                        }}
-                                        style={{ fontSize: 10, color: "#706050", marginBottom: 6, lineHeight: 1.6, cursor: "pointer" }}
-                                        title="Click to highlight this evidence in source text"
-                                      >
-                                        {item.evidence_text || "No evidence text recorded"}
-                                      </div>
-                                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-                                        <RatingPill active={local.rating === "accurate"} label="Accurate" color="#2a7a6a" onClick={() => setRating(item.role_index, item.label_name, "accurate")} />
-                                        <RatingPill active={local.rating === "partially_accurate"} label="Partially accurate" color="#c07030" onClick={() => setRating(item.role_index, item.label_name, "partially_accurate")} />
-                                        <RatingPill active={local.rating === "inaccurate"} label="Inaccurate" color="#c04060" onClick={() => setRating(item.role_index, item.label_name, "inaccurate")} />
-                                      </div>
-                                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-                                        {FLAG_OPTIONS.map((f) => {
-                                          const on = Array.isArray(local.flags) && local.flags.includes(f.key)
-                                          return (
-                                            <button
-                                              key={f.key}
-                                              onClick={() => toggleFlag(item.role_index, item.label_name, f.key)}
-                                              style={{
-                                                border: `1px solid ${on ? "#904060" : "#d8d0c4"}`,
-                                                background: on ? "#f5eaee" : "white",
-                                                color: on ? "#904060" : "#706050",
-                                                borderRadius: 999,
-                                                padding: "2px 8px",
-                                                fontSize: 9,
-                                                cursor: "pointer",
-                                              }}
-                                            >
-                                              {f.label}
-                                            </button>
-                                          )
-                                        })}
-                                      </div>
-                                      <textarea
-                                        value={local.note || ""}
-                                        onChange={(e) => setNote(item.role_index, item.label_name, e.target.value)}
-                                        placeholder="Optional reviewer note"
-                                        style={{ width: "100%", minHeight: 46, resize: "vertical", border: "1px solid #e0dbd4", borderRadius: 4, padding: "6px 8px", fontSize: 10, fontFamily: "inherit", boxSizing: "border-box" }}
-                                      />
-                                    </div>
-                                  )
-                                })}
+                      {functionLabels.map((labelName) => {
+                        const items = functionBuckets[labelName] || []
+                        const parent = parentRatings[labelName] || ""
+                        const showRoleEscalation = parent === "partially_accurate" || parent === "inaccurate"
+                        const roleResolved = showRoleEscalation
+                          ? items.every((item) => Boolean(itemState[`${item.role_index}::${item.label_name}`]?.rating))
+                          : parent === "accurate"
+                        return (
+                          <div key={`fn-bucket-${labelName}`} style={{ border: "1px solid #ede8e2", borderRadius: 6, padding: "8px 9px", background: "#faf8f5" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                              <div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1410" }}>{labelName}</div>
+                                <div style={{ fontSize: 10, color: "#a09080" }}>{items.length} role evidence point{items.length === 1 ? "" : "s"} • {roleResolved ? "Resolved" : "Needs review"}</div>
                               </div>
                             </div>
-                          )
-                        })}
+
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 7 }}>
+                              <RatingPill active={parent === "accurate"} label="Accurate (apply to all roles)" color="#2a7a6a" onClick={() => setParentRating(labelName, "accurate")} />
+                              <RatingPill active={parent === "partially_accurate"} label="Partially accurate" color="#c07030" onClick={() => setParentRating(labelName, "partially_accurate")} />
+                              <RatingPill active={parent === "inaccurate"} label="Inaccurate" color="#c04060" onClick={() => setParentRating(labelName, "inaccurate")} />
+                            </div>
+
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: showRoleEscalation ? 8 : 0 }}>
+                              {items.map((item, idx) => (
+                                <div
+                                  key={`${labelName}-quote-${idx}`}
+                                  onClick={() => {
+                                    setSelectedRoleIndex(item.role_index)
+                                    setHighlightPhrase(item.evidence_text)
+                                    const target = roleRefs.current[item.role_index]
+                                    if (target) target.scrollIntoView({ behavior: "smooth", block: "center" })
+                                  }}
+                                  style={{ fontSize: 10, color: "#706050", lineHeight: 1.6, cursor: "pointer", border: "1px solid #ede8e2", borderRadius: 4, padding: "6px 7px", background: "white" }}
+                                  title="Click to highlight this evidence in source text"
+                                >
+                                  <strong style={{ color: "#1a1410" }}>Role {item.role_index + 1}:</strong> {item.evidence_text || "No evidence text recorded"}
+                                </div>
+                              ))}
+                            </div>
+
+                            {showRoleEscalation && (
+                              <div style={{ borderTop: "1px solid #e8d0d8", paddingTop: 8 }}>
+                                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#a09080", marginBottom: 6 }}>
+                                  Role-level escalation required
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                  {items.map((item) => {
+                                    const key = `${item.role_index}::${item.label_name}`
+                                    const local = itemState[key] || {}
+                                    const role = parsedRoles[item.role_index] || {}
+                                    return (
+                                      <div key={key} style={{ background: "white", border: "1px solid #ede8e2", borderRadius: 6, padding: "7px 8px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                                          <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1410" }}>{role.title || `Role ${item.role_index + 1}`}</div>
+                                          <button
+                                            onClick={() => {
+                                              setSelectedRoleIndex(item.role_index)
+                                              setHighlightPhrase(item.evidence_text)
+                                              const target = roleRefs.current[item.role_index]
+                                              if (target) target.scrollIntoView({ behavior: "smooth", block: "center" })
+                                            }}
+                                            style={{ border: "1px solid #d8d0c4", background: "white", color: "#706050", borderRadius: 4, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}
+                                          >
+                                            Jump to text
+                                          </button>
+                                        </div>
+                                        <div style={{ fontSize: 10, color: "#706050", marginBottom: 6, lineHeight: 1.6 }}>
+                                          {item.evidence_text || "No evidence text recorded"}
+                                        </div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                                          <RatingPill active={local.rating === "accurate"} label="Accurate" color="#2a7a6a" onClick={() => setRating(item.role_index, item.label_name, "accurate")} />
+                                          <RatingPill active={local.rating === "partially_accurate"} label="Partially accurate" color="#c07030" onClick={() => setRating(item.role_index, item.label_name, "partially_accurate")} />
+                                          <RatingPill active={local.rating === "inaccurate"} label="Inaccurate" color="#c04060" onClick={() => setRating(item.role_index, item.label_name, "inaccurate")} />
+                                        </div>
+                                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                                          {FLAG_OPTIONS.map((f) => {
+                                            const on = Array.isArray(local.flags) && local.flags.includes(f.key)
+                                            return (
+                                              <button
+                                                key={f.key}
+                                                onClick={() => toggleFlag(item.role_index, item.label_name, f.key)}
+                                                style={{
+                                                  border: `1px solid ${on ? "#904060" : "#d8d0c4"}`,
+                                                  background: on ? "#f5eaee" : "white",
+                                                  color: on ? "#904060" : "#706050",
+                                                  borderRadius: 999,
+                                                  padding: "2px 8px",
+                                                  fontSize: 9,
+                                                  cursor: "pointer",
+                                                }}
+                                              >
+                                                {f.label}
+                                              </button>
+                                            )
+                                          })}
+                                        </div>
+                                        <textarea
+                                          value={local.note || ""}
+                                          onChange={(e) => setNote(item.role_index, item.label_name, e.target.value)}
+                                          placeholder="Optional reviewer note"
+                                          style={{ width: "100%", minHeight: 46, resize: "vertical", border: "1px solid #e0dbd4", borderRadius: 4, padding: "6px 8px", fontSize: 10, fontFamily: "inherit", boxSizing: "border-box" }}
+                                        />
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
