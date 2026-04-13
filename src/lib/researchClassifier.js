@@ -235,6 +235,45 @@ Chief Executive - Accountable for organizational performance as a whole. Sets th
   placeholder(10),
 ]
 
+export const EVIDENCE_SELECTION_PRESETS = [
+  {
+    key: "strict_single_best",
+    name: "Strict — Single Best",
+    description: "Single canonical snippet. Relevance-first, no diversity constraint.",
+    strategy: "relevance_first",
+    maxSnippets: 1,
+    coverage: "allow_same_role",
+    joiner: " and ",
+  },
+  {
+    key: "standard_balanced",
+    name: "Standard — Balanced",
+    description: "Up to 2 snippets. Relevance-first with distinct-role preference.",
+    strategy: "relevance_first",
+    maxSnippets: 2,
+    coverage: "distinct_roles_preferred",
+    joiner: " · ",
+  },
+  {
+    key: "simple_website_style",
+    name: "Simple — Website Style",
+    description: "Up to 2 snippets by role order, joined with legacy 'and'.",
+    strategy: "role_order",
+    maxSnippets: 2,
+    coverage: "allow_same_role",
+    joiner: " and ",
+  },
+  {
+    key: "broad_coverage",
+    name: "Broad — Coverage First",
+    description: "Up to 3 snippets with strict role diversity first.",
+    strategy: "relevance_first",
+    maxSnippets: 3,
+    coverage: "strict_distinct_roles",
+    joiner: " · ",
+  },
+]
+
 // ─── Default selections ───────────────────────────────────────────────────────
 
 export const DEFAULT_SETTINGS = {
@@ -242,6 +281,15 @@ export const DEFAULT_SETTINGS = {
   evidenceKey: EVIDENCE_INSTRUCTIONS[0].key,
   extractKey:  EXTRACT_PROMPTS[0].key,
   fnDefsKey:   FN_DEFINITIONS[0].key,
+  evidencePresetKey: "simple_website_style",
+}
+
+export function getEvidencePresetByKey(key) {
+  return EVIDENCE_SELECTION_PRESETS.find((p) => p.key === key) || EVIDENCE_SELECTION_PRESETS[2]
+}
+
+export function isPlaceholderOption(option) {
+  return String(option?.content || "").startsWith("PLACEHOLDER")
 }
 
 // ─── Prompt assembly ──────────────────────────────────────────────────────────
@@ -378,42 +426,83 @@ export async function getSummary(resumeText, model) {
   return callAPI(system, resumeText, model)
 }
 
-export function aggregateLabels(roles, classifications) {
-  const pickBestEvidence = (evidences) => {
-    const cleaned = [...new Set(
-      (Array.isArray(evidences) ? evidences : [])
-        .map(e => (typeof e === 'string' ? e.trim() : ''))
-        .filter(Boolean)
-    )]
-    if (!cleaned.length) return ''
-
-    const score = (text) => {
-      let s = Math.min(text.length, 220)
-      if (/\d/.test(text)) s += 10
-      if (/['"]/.test(text)) s += 4
-      if (/\b(led|managed|built|designed|owned|drove|launched|reduced|improved|increased|defined|directed)\b/i.test(text)) s += 8
-      return s
+export function aggregateLabels(roles, classifications, evidencePresetKey = DEFAULT_SETTINGS.evidencePresetKey) {
+  const preset = getEvidencePresetByKey(evidencePresetKey)
+  const scoreEvidence = (text) => {
+    let s = Math.min(String(text || "").length, 220)
+    if (/\d/.test(text)) s += 10
+    if (/['"]/.test(text)) s += 4
+    if (/\b(led|managed|built|designed|owned|drove|launched|reduced|improved|increased|defined|directed)\b/i.test(text)) s += 8
+    return s
+  }
+  const pickEvidence = (items) => {
+    const cleaned = []
+    const seen = new Set()
+    for (const item of Array.isArray(items) ? items : []) {
+      const text = (item?.evidence || "").trim()
+      if (!text) continue
+      const dedupeKey = `${item.role_index}::${text.toLowerCase()}`
+      if (seen.has(dedupeKey)) continue
+      seen.add(dedupeKey)
+      cleaned.push({ ...item, evidence: text })
     }
+    if (!cleaned.length) return ""
 
-    return cleaned.sort((a, b) => score(b) - score(a))[0]
+    const ranked = [...cleaned].sort((a, b) => {
+      if (preset.strategy === "role_order") {
+        if (a.order !== b.order) return a.order - b.order
+        return a.role_index - b.role_index
+      }
+      const delta = scoreEvidence(b.evidence) - scoreEvidence(a.evidence)
+      if (delta !== 0) return delta
+      if (a.role_index !== b.role_index) return a.role_index - b.role_index
+      return a.order - b.order
+    })
+
+    const maxSnippets = Math.max(1, Number(preset.maxSnippets) || 1)
+    const selected = []
+    const usedRoles = new Set()
+    for (const row of ranked) {
+      if (selected.length >= maxSnippets) break
+      const isUsedRole = usedRoles.has(row.role_index)
+      if (preset.coverage === "strict_distinct_roles" && isUsedRole) continue
+      if (preset.coverage === "distinct_roles_preferred" && isUsedRole) continue
+      selected.push(row.evidence)
+      usedRoles.add(row.role_index)
+    }
+    if (selected.length < maxSnippets && preset.coverage === "distinct_roles_preferred") {
+      for (const row of ranked) {
+        if (selected.length >= maxSnippets) break
+        if (selected.includes(row.evidence)) continue
+        selected.push(row.evidence)
+      }
+    }
+    return selected.slice(0, maxSnippets).join(preset.joiner || " · ")
   }
 
   const labelAccum = {}
+  let order = 0
   for (const roleClass of classifications) {
     const role = roles[roleClass.role_index]
     if (!role || role.flagged || !role.months) continue
     for (const label of (roleClass.labels || [])) {
       if (!labelAccum[label.name]) {
-        labelAccum[label.name] = { name: label.name, months: 0, evidences: [] }
+        labelAccum[label.name] = { name: label.name, months: 0, evidenceRows: [] }
       }
       labelAccum[label.name].months += role.months
-      if (label.evidence) labelAccum[label.name].evidences.push(label.evidence)
+      if (label.evidence) {
+        labelAccum[label.name].evidenceRows.push({
+          role_index: Number(roleClass.role_index),
+          evidence: label.evidence,
+          order: order++,
+        })
+      }
     }
   }
   return Object.values(labelAccum).map(l => ({
     name:     l.name,
     months:   l.months,
-    evidence: pickBestEvidence(l.evidences),
+    evidence: pickEvidence(l.evidenceRows),
   }))
 }
 

@@ -5,6 +5,7 @@ import {
   CLASSIFICATION_RULES,
   EVIDENCE_INSTRUCTIONS,
   EXTRACT_PROMPTS,
+  EVIDENCE_SELECTION_PRESETS,
   FN_DEFINITIONS,
 } from "../../lib/researchClassifier.js"
 
@@ -14,6 +15,7 @@ const RULE_NAME_MAP = Object.fromEntries(CLASSIFICATION_RULES.map((x) => [x.key,
 const EVIDENCE_NAME_MAP = Object.fromEntries(EVIDENCE_INSTRUCTIONS.map((x) => [x.key, x.name]))
 const EXTRACT_NAME_MAP = Object.fromEntries(EXTRACT_PROMPTS.map((x) => [x.key, x.name]))
 const FN_DEFS_NAME_MAP = Object.fromEntries(FN_DEFINITIONS.map((x) => [x.key, x.name]))
+const EVIDENCE_PRESET_NAME_MAP = Object.fromEntries(EVIDENCE_SELECTION_PRESETS.map((x) => [x.key, x.name]))
 
 function formatDate(ts) {
   if (!ts) return "Unknown date"
@@ -197,6 +199,7 @@ export default function ResearchResultsViz() {
   const [selectedEvidence, setSelectedEvidence] = useState("ALL")
   const [selectedFnDefs, setSelectedFnDefs] = useState("ALL")
   const [selectedRules, setSelectedRules] = useState("ALL")
+  const [selectedEvidencePreset, setSelectedEvidencePreset] = useState("ALL")
   const [selectedTag, setSelectedTag] = useState("ALL")
   const [selectedRunId, setSelectedRunId] = useState("ALL")
 
@@ -222,8 +225,8 @@ export default function ResearchResultsViz() {
         return
       }
 
-      let resultQuery = await supabase.from("research_run_results").select("id, run_id, variant_key, variant_label, model_key, model_label, model_string, rules_key, evidence_key, extract_key, fn_defs_key, blind_mode, classifications")
-      if (resultQuery.error && /variant_label|model_label|model_key|rules_key|evidence_key|extract_key|fn_defs_key|blind_mode|column/i.test(resultQuery.error.message || "")) {
+      let resultQuery = await supabase.from("research_run_results").select("id, run_id, variant_key, variant_label, model_key, model_label, model_string, rules_key, evidence_key, extract_key, fn_defs_key, evidence_preset_key, blind_mode, classifications")
+      if (resultQuery.error && /variant_label|model_label|model_key|rules_key|evidence_key|extract_key|fn_defs_key|evidence_preset_key|blind_mode|column/i.test(resultQuery.error.message || "")) {
         resultQuery = await supabase.from("research_run_results").select("id, run_id, variant_key, model_string, classifications")
       }
       if (resultQuery.error) {
@@ -308,6 +311,8 @@ export default function ResearchResultsViz() {
           evidence_label: labelFromMap(r.evidence_key || settings.evidence_key, EVIDENCE_NAME_MAP) || "Not recorded",
           extract_label: labelFromMap(r.extract_key || settings.extract_key, EXTRACT_NAME_MAP) || "Not recorded",
           fn_defs_label: labelFromMap(r.fn_defs_key || settings.fn_defs_key, FN_DEFS_NAME_MAP) || "Not recorded",
+          evidence_preset_key: r.evidence_preset_key || settings.evidence_preset_key || "legacy_unknown",
+          evidence_preset_label: labelFromMap(r.evidence_preset_key || settings.evidence_preset_key, EVIDENCE_PRESET_NAME_MAP) || "Legacy / Unknown",
           function_review_finalized: reviewedFinalized,
           evidence_review_finalized: Boolean(evidenceFinalizedByResultId[r.id]),
           accuracy_pct: accuracy?.pct ?? null,
@@ -337,6 +342,7 @@ export default function ResearchResultsViz() {
   const evidenceOptions = useMemo(() => [...new Set(rows.map((r) => r.evidence_label).filter(Boolean))].sort(), [rows])
   const fnDefsOptions = useMemo(() => [...new Set(rows.map((r) => r.fn_defs_label).filter(Boolean))].sort(), [rows])
   const rulesOptions = useMemo(() => [...new Set(rows.map((r) => r.rules_label).filter(Boolean))].sort(), [rows])
+  const evidencePresetOptions = useMemo(() => [...new Set(rows.map((r) => r.evidence_preset_label).filter(Boolean))].sort(), [rows])
   const tagOptions = useMemo(() => [...new Set(rows.flatMap((r) => r.resume_tags || []).filter(Boolean))].sort(), [rows])
   const runIdOptions = useMemo(() => {
     const map = new Map()
@@ -359,10 +365,11 @@ export default function ResearchResultsViz() {
     if (selectedEvidence !== "ALL" && r.evidence_label !== selectedEvidence) return false
     if (selectedFnDefs !== "ALL" && r.fn_defs_label !== selectedFnDefs) return false
     if (selectedRules !== "ALL" && r.rules_label !== selectedRules) return false
+    if (selectedEvidencePreset !== "ALL" && r.evidence_preset_label !== selectedEvidencePreset) return false
     if (selectedTag !== "ALL" && !(r.resume_tags || []).includes(selectedTag)) return false
     if (selectedRunId !== "ALL" && r.run_id !== selectedRunId) return false
     return true
-  }), [activeSourceRows, selectedModels, selectedExtract, selectedEvidence, selectedFnDefs, selectedRules, selectedTag, selectedRunId])
+  }), [activeSourceRows, selectedModels, selectedExtract, selectedEvidence, selectedFnDefs, selectedRules, selectedEvidencePreset, selectedTag, selectedRunId])
 
   const groupedAccuracy = useMemo(() => {
     const map = new Map()
@@ -452,7 +459,7 @@ export default function ResearchResultsViz() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(160px, 1fr))", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(160px, 1fr))", gap: 10 }}>
           <div>
             <div style={{ fontSize: 10, color: "#a09080", marginBottom: 4 }}>Extraction prompt</div>
             <select value={selectedExtract} onChange={(e) => setSelectedExtract(e.target.value)} style={{ width: "100%", padding: "8px 10px", fontSize: 12, border: "1px solid #d8d0c4", borderRadius: 6, fontFamily: "inherit" }}>
@@ -479,6 +486,13 @@ export default function ResearchResultsViz() {
             <select value={selectedRules} onChange={(e) => setSelectedRules(e.target.value)} style={{ width: "100%", padding: "8px 10px", fontSize: 12, border: "1px solid #d8d0c4", borderRadius: 6, fontFamily: "inherit" }}>
               <option value="ALL">All</option>
               {rulesOptions.map((x) => <option key={x} value={x}>{x}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: "#a09080", marginBottom: 4 }}>Evidence selection</div>
+            <select value={selectedEvidencePreset} onChange={(e) => setSelectedEvidencePreset(e.target.value)} style={{ width: "100%", padding: "8px 10px", fontSize: 12, border: "1px solid #d8d0c4", borderRadius: 6, fontFamily: "inherit" }}>
+              <option value="ALL">All</option>
+              {evidencePresetOptions.map((x) => <option key={x} value={x}>{x}</option>)}
             </select>
           </div>
           <div>
@@ -558,6 +572,7 @@ export default function ResearchResultsViz() {
                   <option value="model_label">Group by model</option>
                   <option value="rules_label">Group by rules</option>
                   <option value="evidence_label">Group by evidence</option>
+                  <option value="evidence_preset_label">Group by evidence selection</option>
                   <option value="extract_label">Group by extraction prompt</option>
                   <option value="fn_defs_label">Group by function level defs</option>
                   <option value="variant_label">Group by variant</option>
@@ -637,7 +652,7 @@ export default function ResearchResultsViz() {
                 <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 980 }}>
                   <thead>
                     <tr>
-                      {["Run ID", "Resume", "Model", "Rules", "Evidence", "Extraction", "Fn Defs", "Industry Tags", "Accuracy", "Date"].map((h) => <th key={h} style={{ textAlign: "left", fontSize: 10, color: "#a09080", padding: "6px 8px", borderBottom: "1px solid #e0dbd4", textTransform: "uppercase", letterSpacing: ".08em" }}>{h}</th>)}
+                      {["Run ID", "Resume", "Model", "Rules", "Evidence", "Evidence Selection", "Extraction", "Fn Defs", "Industry Tags", "Accuracy", "Date"].map((h) => <th key={h} style={{ textAlign: "left", fontSize: 10, color: "#a09080", padding: "6px 8px", borderBottom: "1px solid #e0dbd4", textTransform: "uppercase", letterSpacing: ".08em" }}>{h}</th>)}
                     </tr>
                   </thead>
                   <tbody>
@@ -648,6 +663,7 @@ export default function ResearchResultsViz() {
                         <td style={{ padding: "7px 8px", fontSize: 11, borderBottom: "1px solid #ede8e2", color: "#1a1410" }}>{r.model_label}</td>
                         <td style={{ padding: "7px 8px", fontSize: 11, borderBottom: "1px solid #ede8e2", color: "#706050" }}>{r.rules_label}</td>
                         <td style={{ padding: "7px 8px", fontSize: 11, borderBottom: "1px solid #ede8e2", color: "#706050" }}>{r.evidence_label}</td>
+                        <td style={{ padding: "7px 8px", fontSize: 11, borderBottom: "1px solid #ede8e2", color: "#706050" }}>{r.evidence_preset_label}</td>
                         <td style={{ padding: "7px 8px", fontSize: 11, borderBottom: "1px solid #ede8e2", color: "#706050" }}>{r.extract_label}</td>
                         <td style={{ padding: "7px 8px", fontSize: 11, borderBottom: "1px solid #ede8e2", color: "#706050" }}>{r.fn_defs_label}</td>
                         <td style={{ padding: "7px 8px", fontSize: 11, borderBottom: "1px solid #ede8e2", color: "#706050" }}>{(r.resume_tags || []).join(", ") || "—"}</td>

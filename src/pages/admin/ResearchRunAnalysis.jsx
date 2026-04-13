@@ -6,7 +6,8 @@ import { useState, useEffect } from "react"
 import { supabase } from "../../lib/supabase.js"
 import {
   AVAILABLE_MODELS, CLASSIFICATION_RULES, EVIDENCE_INSTRUCTIONS,
-  EXTRACT_PROMPTS, FN_DEFINITIONS, DEFAULT_SETTINGS,
+  EXTRACT_PROMPTS, FN_DEFINITIONS, EVIDENCE_SELECTION_PRESETS, DEFAULT_SETTINGS,
+  isPlaceholderOption,
   classifyRoles, getSummary, aggregateLabels, m2y, seniority,
 } from "../../lib/researchClassifier.js"
 import RoleLabelDotTable from "../../components/RoleLabelDotTable.jsx"
@@ -113,11 +114,12 @@ function ResumeSelector({ resumes, selectedIds, onToggle, onSelectAll, onClearAl
 // ─── Component selector ───────────────────────────────────────────────────────
 
 function ComponentSelector({ label, options, selectedKey, onChange }) {
+  const visibleOptions = options.filter((opt) => !isPlaceholderOption(opt))
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: '#1a1410', marginBottom: 8 }}>{label}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {options.map(opt => (
+        {visibleOptions.map(opt => (
           <label key={opt.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
             <input
               type="radio"
@@ -173,6 +175,28 @@ function SettingsPanel({ selectedModels, setSelectedModels, blind, setBlind, com
         <button onClick={() => setBlind(b => !b)} style={btnStyle(blind)}>
           {blind ? 'On — title hidden' : 'Off — titled'}
         </button>
+      </div>
+
+      <div style={{ borderTop: '1px solid #e0dbd4', paddingTop: 16, marginBottom: 18 }}>
+        <div style={{ ...label9, marginBottom: 12 }}>Evidence Selection</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {EVIDENCE_SELECTION_PRESETS.map((preset) => (
+            <label key={preset.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="Evidence selection"
+                value={preset.key}
+                checked={componentKeys.evidencePresetKey === preset.key}
+                onChange={() => setKey('evidencePresetKey', preset.key)}
+                style={{ marginTop: 2, flexShrink: 0 }}
+              />
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#1a1410' }}>{preset.name}</div>
+                <div style={{ fontSize: 10, color: '#a09080' }}>{preset.description}</div>
+              </div>
+            </label>
+          ))}
+        </div>
       </div>
 
       <div style={{ borderTop: '1px solid #e0dbd4', paddingTop: 16 }}>
@@ -385,6 +409,7 @@ export default function ResearchRunAnalysis() {
     evidence: EVIDENCE_INSTRUCTIONS.find(e => e.key === componentKeys.evidenceKey),
     extract:  EXTRACT_PROMPTS.find(e => e.key === componentKeys.extractKey),
     fnDefs:   FN_DEFINITIONS.find(f => f.key === componentKeys.fnDefsKey),
+    evidencePreset: EVIDENCE_SELECTION_PRESETS.find(p => p.key === componentKeys.evidencePresetKey) || EVIDENCE_SELECTION_PRESETS[2],
   })
 
   const buildVariants = () =>
@@ -433,6 +458,7 @@ export default function ResearchRunAnalysis() {
         evidence_key: componentKeys.evidenceKey,
         extract_key:  componentKeys.extractKey,
         fn_defs_key:  componentKeys.fnDefsKey,
+        evidence_preset_key: componentKeys.evidencePresetKey,
       }
 
       const { data: run, error: runErr } = await supabase
@@ -458,6 +484,7 @@ export default function ResearchRunAnalysis() {
             EVIDENCE_INSTRUCTIONS.find(x => x.key === componentKeys.evidenceKey)?.name || componentKeys.evidenceKey,
             EXTRACT_PROMPTS.find(x => x.key === componentKeys.extractKey)?.name || componentKeys.extractKey,
             FN_DEFINITIONS.find(x => x.key === componentKeys.fnDefsKey)?.name || componentKeys.fnDefsKey,
+            EVIDENCE_SELECTION_PRESETS.find(x => x.key === componentKeys.evidencePresetKey)?.name || componentKeys.evidencePresetKey,
           ].join(" | ")
           return {
             run_id:          run.id,
@@ -470,6 +497,7 @@ export default function ResearchRunAnalysis() {
             evidence_key:    componentKeys.evidenceKey,
             extract_key:     componentKeys.extractKey,
             fn_defs_key:     componentKeys.fnDefsKey,
+            evidence_preset_key: componentKeys.evidencePresetKey,
             variant_label:   variantLabel,
             classifications: r.classifications || [],
             summary:         r.summary || '',
@@ -482,7 +510,7 @@ export default function ResearchRunAnalysis() {
         let { error: resultsErr } = await supabase
           .from('research_run_results')
           .insert(resultRows)
-        if (resultsErr && /column|schema|variant_label|model_key|blind_mode/i.test(resultsErr.message || '')) {
+        if (resultsErr && /column|schema|variant_label|model_key|blind_mode|evidence_preset_key/i.test(resultsErr.message || '')) {
           const legacyRows = resultRows.map(r => ({
             run_id: r.run_id,
             variant_key: r.variant_key,
@@ -552,7 +580,7 @@ export default function ResearchRunAnalysis() {
           classifyRoles(parsedRoles, model, isBlind, components.rules, components.evidence, components.fnDefs),
           getSummary(resume.clean_text, model),
         ])
-        const functions = aggregateLabels(parsedRoles, classifs)
+        const functions = aggregateLabels(parsedRoles, classifs, componentKeys.evidencePresetKey)
 
         allClassifications[key] = classifs
         allResults[key]         = { ...summary, functions }

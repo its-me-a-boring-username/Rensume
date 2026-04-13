@@ -11,6 +11,7 @@ import {
   CLASSIFICATION_RULES,
   EVIDENCE_INSTRUCTIONS,
   EXTRACT_PROMPTS,
+  EVIDENCE_SELECTION_PRESETS,
   FN_DEFINITIONS,
 } from "../../lib/researchClassifier.js"
 
@@ -28,6 +29,7 @@ const RULE_NAME_MAP = Object.fromEntries(CLASSIFICATION_RULES.map(x => [x.key, x
 const EVIDENCE_NAME_MAP = Object.fromEntries(EVIDENCE_INSTRUCTIONS.map(x => [x.key, x.name]))
 const EXTRACT_NAME_MAP = Object.fromEntries(EXTRACT_PROMPTS.map(x => [x.key, x.name]))
 const FN_DEFS_NAME_MAP = Object.fromEntries(FN_DEFINITIONS.map(x => [x.key, x.name]))
+const EVIDENCE_PRESET_NAME_MAP = Object.fromEntries(EVIDENCE_SELECTION_PRESETS.map(x => [x.key, x.name]))
 
 function formatDate(ts) {
   if (!ts) return "Unknown date"
@@ -190,6 +192,7 @@ function RunHeader({ run, variantRows }) {
   const extractPrompt = formatHeaderValue(variantRows, settings, "extract_key", "extract_key", EXTRACT_NAME_MAP)
   const evidence = formatHeaderValue(variantRows, settings, "evidence_key", "evidence_key", EVIDENCE_NAME_MAP)
   const fnDefs = formatHeaderValue(variantRows, settings, "fn_defs_key", "fn_defs_key", FN_DEFS_NAME_MAP)
+  const evidencePreset = formatHeaderValue(variantRows, settings, "evidence_preset_key", "evidence_preset_key", EVIDENCE_PRESET_NAME_MAP)
 
   const blindFromRows = firstDefined(variantRows, "blind_mode")
   const blindMode = blindFromRows !== null
@@ -201,6 +204,7 @@ function RunHeader({ run, variantRows }) {
     { label: "Rules", value: rules },
     { label: "Extraction Prompt", value: extractPrompt },
     { label: "Evidence", value: evidence },
+    { label: "Evidence Selection", value: evidencePreset },
     { label: "Function Level Definitions", value: fnDefs },
   ]
   const runDate = formatDate(run.created_at)
@@ -385,10 +389,10 @@ export default function ResearchResultsHistory() {
 
       let { data, error } = await supabase
         .from("research_run_results")
-        .select("id, run_id, variant_key, variant_label, model_string, model_key, model_label, blind_mode, rules_key, evidence_key, extract_key, fn_defs_key, classifications, summary, strengths, functions")
+        .select("id, run_id, variant_key, variant_label, model_string, model_key, model_label, blind_mode, rules_key, evidence_key, extract_key, fn_defs_key, evidence_preset_key, classifications, summary, strengths, functions")
         .eq("run_id", selectedRunId)
         .order("variant_key", { ascending: true })
-      if (error && /variant_label|model_label|model_key|blind_mode|rules_key|evidence_key|extract_key|fn_defs_key|column/i.test(error.message || "")) {
+      if (error && /variant_label|model_label|model_key|blind_mode|rules_key|evidence_key|extract_key|fn_defs_key|evidence_preset_key|column/i.test(error.message || "")) {
         const legacy = await supabase
           .from("research_run_results")
           .select("id, run_id, variant_key, model_string, classifications, summary, strengths, functions")
