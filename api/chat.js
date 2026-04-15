@@ -78,7 +78,14 @@ export default async function handler(req) {
     if (!response.ok) {
       const err = await response.text()
       console.error('Anthropic API error:', response.status, err)
-      return new Response(JSON.stringify({ error: 'Classification service error', status: response.status }), {
+      let detail = ''
+      try {
+        const parsed = JSON.parse(err)
+        detail = parsed?.error?.message || parsed?.message || ''
+      } catch {
+        detail = String(err || '').slice(0, 500)
+      }
+      return new Response(JSON.stringify({ error: detail || 'Classification service error', status: response.status }), {
         status: 502,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       })

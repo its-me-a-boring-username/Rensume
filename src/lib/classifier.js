@@ -201,10 +201,6 @@ function buildRolePayload(roles) {
       role_index: roleIndex,
       title: r.title || '',
       employer: r.employer || '',
-      start_raw: r.start_raw || '',
-      end_raw: r.end_raw || '',
-      start: r.start || '',
-      end: r.end || '',
       months: Number(r.months) || 0,
       text: r.text || '',
     })),
@@ -318,7 +314,12 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   const { knowledgeAreas, functionLevels, industries } = await fetchTaxonomy()
 
   onProgress('Parsing clean role data...')
-  const extracted = await callAPI(buildExtractSystem(), 'Parse this resume text:\n\n' + resumeText)
+  let extracted
+  try {
+    extracted = await callAPI(buildExtractSystem(), 'Parse this resume text:\n\n' + resumeText)
+  } catch (e) {
+    throw new Error(`Role parsing failed: ${e.message || 'unknown error'}`)
+  }
   const processedRoles = normalizeExtractedRoles(extracted)
   const rolePayload = buildRolePayload(processedRoles)
 
@@ -326,15 +327,27 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
     throw new Error('Could not parse roles from this resume. Please revise formatting and try again.')
   }
 
-  const totalMonths = rolePayload.roles.reduce((sum, r) => sum + (Number(r.months) || 0), 0)
+  const totalMonths = processedRoles
+    .filter((r) => !r.flagged)
+    .reduce((sum, r) => sum + (Number(r.months) || 0), 0)
   const totalYears = monthsToYears(totalMonths)
-  const rolePrompt = 'Classify this parsed resume role data:\n\n' + JSON.stringify(rolePayload, null, 2)
+  const rolePrompt = 'Classify this parsed resume role data:\n\n' + JSON.stringify(rolePayload)
 
   onProgress('Classifying functions and industries...')
-  const shared = await callAPI(buildSharedSystem(functionLevels, industries), rolePrompt)
+  let shared
+  try {
+    shared = await callAPI(buildSharedSystem(functionLevels, industries), rolePrompt)
+  } catch (e) {
+    throw new Error(`Function/industry classification failed: ${e.message || 'unknown error'}`)
+  }
 
   onProgress('Classifying knowledge areas...')
-  const kaResult = await callAPI(buildKnowledgeAreaSystem(knowledgeAreas), rolePrompt)
+  let kaResult
+  try {
+    kaResult = await callAPI(buildKnowledgeAreaSystem(knowledgeAreas), rolePrompt)
+  } catch (e) {
+    throw new Error(`Knowledge area classification failed: ${e.message || 'unknown error'}`)
+  }
 
   const functionNames = (functionLevels || []).map((f) => f.name)
   const industryNames = (industries || []).map((i) => i.name)
