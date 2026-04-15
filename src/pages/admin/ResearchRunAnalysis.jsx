@@ -232,9 +232,9 @@ function SettingsPanel({ selectedModels, setSelectedModels, blind, setBlind, com
             <span style={{ fontSize: 11, fontWeight: 700, color: '#1a1410' }}>Joiner text</span>
             <input
               type="text"
-              value={componentKeys.evidenceJoiner ?? " and "}
+              value={componentKeys.evidenceJoiner ?? " • "}
               onChange={(e) => setKey('evidenceJoiner', e.target.value)}
-              placeholder=" and "
+              placeholder=" • "
               style={{ width: '100%', padding: '8px 10px', fontSize: 12, border: '1px solid #d8d0c4', borderRadius: 6, fontFamily: 'inherit' }}
             />
             <span style={{ fontSize: 10, color: '#a09080' }}>Text inserted between multiple snippets.</span>
@@ -564,7 +564,7 @@ export default function ResearchRunAnalysis() {
         evidence_display_settings_key: componentKeys.evidenceDisplaySettingsKey,
         evidence_quality_assessment_key: componentKeys.evidenceQualityAssessmentKey,
         evidence_max_snippets: Number(componentKeys.evidenceMaxSnippets) || 2,
-        evidence_joiner: String(componentKeys.evidenceJoiner ?? " and "),
+        evidence_joiner: String(componentKeys.evidenceJoiner ?? " • "),
       }
 
       const { data: run, error: runErr } = await supabase

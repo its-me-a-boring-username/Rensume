@@ -315,7 +315,7 @@ export const DEFAULT_SETTINGS = {
   evidenceDisplaySettingsKey: "standard_balanced",
   evidenceQualityAssessmentKey: "quality_v1_balanced",
   evidenceMaxSnippets: "2",
-  evidenceJoiner: " and ",
+  evidenceJoiner: " • ",
 }
 
 export function getEvidenceDisplaySettingsByKey(key) {
@@ -554,7 +554,7 @@ export function aggregateLabels(
         selected.push(row.evidence)
       }
     }
-    return selected.slice(0, maxSnippets).join(String(evidenceJoiner ?? " and "))
+    return selected.slice(0, maxSnippets).join(String(evidenceJoiner ?? " • "))
   }
 
   const labelAccum = {}
