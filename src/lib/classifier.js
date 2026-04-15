@@ -273,12 +273,13 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
     .sort((a, b) => (b.months - a.months) || a.name.localeCompare(b.name))
 }
 
-async function callAPI(system, userContent) {
+async function callAPI(system, userContent, model) {
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       max_tokens: 2000,
+      model,
       system,
       messages: [{ role: 'user', content: userContent }],
     }),
@@ -316,7 +317,11 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   onProgress('Parsing clean role data...')
   let extracted
   try {
-    extracted = await callAPI(buildExtractSystem(), 'Parse this resume text:\n\n' + resumeText)
+    extracted = await callAPI(
+      buildExtractSystem(),
+      'Parse this resume text:\n\n' + resumeText,
+      'claude-haiku-4-5-20251001'
+    )
   } catch (e) {
     throw new Error(`Role parsing failed: ${e.message || 'unknown error'}`)
   }
@@ -336,7 +341,10 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   onProgress('Classifying functions and industries...')
   let shared
   try {
-    shared = await callAPI(buildSharedSystem(functionLevels, industries), rolePrompt)
+    shared = await callAPI(
+      buildSharedSystem(functionLevels, industries),
+      rolePrompt
+    )
   } catch (e) {
     throw new Error(`Function/industry classification failed: ${e.message || 'unknown error'}`)
   }
@@ -344,7 +352,10 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   onProgress('Classifying knowledge areas...')
   let kaResult
   try {
-    kaResult = await callAPI(buildKnowledgeAreaSystem(knowledgeAreas), rolePrompt)
+    kaResult = await callAPI(
+      buildKnowledgeAreaSystem(knowledgeAreas),
+      rolePrompt
+    )
   } catch (e) {
     throw new Error(`Knowledge area classification failed: ${e.message || 'unknown error'}`)
   }
