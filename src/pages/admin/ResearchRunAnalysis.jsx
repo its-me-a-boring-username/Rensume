@@ -114,28 +114,63 @@ function ResumeSelector({ resumes, selectedIds, onToggle, onSelectAll, onClearAl
 // ─── Component selector ───────────────────────────────────────────────────────
 
 function ComponentSelector({ label, options, selectedKey, onChange }) {
+  const [expanded, setExpanded] = useState({})
   const visibleOptions = options.filter((opt) => !isPlaceholderOption(opt))
   return (
     <div style={{ marginBottom: 24, paddingTop: 4, paddingBottom: 2 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: '#1a1410', marginBottom: 12 }}>{label}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {visibleOptions.map(opt => (
-          <label key={opt.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', padding: '2px 0' }}>
-            <input
-              type="radio"
-              name={label}
-              value={opt.key}
-              checked={selectedKey === opt.key}
-              onChange={() => onChange(opt.key)}
-              style={{ marginTop: 2, flexShrink: 0 }}
-            />
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: opt.content.startsWith('PLACEHOLDER') ? '#a09080' : '#1a1410' }}>
-                {opt.name}
+          <div key={opt.key} style={{ border: '1px solid #ede8e2', borderRadius: 6, background: 'white', padding: '8px 10px' }}>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', padding: '2px 0' }}>
+              <input
+                type="radio"
+                name={label}
+                value={opt.key}
+                checked={selectedKey === opt.key}
+                onChange={() => onChange(opt.key)}
+                style={{ marginTop: 2, flexShrink: 0 }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: opt.content.startsWith('PLACEHOLDER') ? '#a09080' : '#1a1410' }}>
+                    {opt.name}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setExpanded(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))
+                    }}
+                    style={{ border: 'none', background: 'transparent', color: '#706050', cursor: 'pointer', fontSize: 13, fontWeight: 700, padding: '0 2px' }}
+                    title={expanded[opt.key] ? 'Hide content' : 'Show content'}
+                    aria-label={expanded[opt.key] ? 'Hide content' : 'Show content'}
+                  >
+                    {expanded[opt.key] ? '⌄' : '>'}
+                  </button>
+                </div>
+                <div style={{ fontSize: 10, color: '#a09080' }}>{opt.description}</div>
               </div>
-              <div style={{ fontSize: 10, color: '#a09080' }}>{opt.description}</div>
-            </div>
-          </label>
+            </label>
+            {expanded[opt.key] && (
+              <pre style={{
+                margin: '8px 0 0',
+                padding: '8px 10px',
+                background: '#faf8f5',
+                border: '1px solid #e8e2db',
+                borderRadius: 6,
+                color: '#403830',
+                fontSize: 10,
+                lineHeight: 1.45,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+              }}>
+                {opt.content || 'No content recorded.'}
+              </pre>
+            )}
+          </div>
         ))}
       </div>
     </div>
@@ -145,6 +180,7 @@ function ComponentSelector({ label, options, selectedKey, onChange }) {
 // ─── Settings panel ───────────────────────────────────────────────────────────
 
 function SettingsPanel({ selectedModels, setSelectedModels, blind, setBlind, componentKeys, setComponentKeys }) {
+  const [qualityExpanded, setQualityExpanded] = useState({})
   const toggle = (key) => {
     setSelectedModels(prev =>
       prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
@@ -210,20 +246,58 @@ function SettingsPanel({ selectedModels, setSelectedModels, blind, setBlind, com
         <div style={{ ...label9, marginBottom: 14 }}>Evidence Quality Assessment</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 28px' }}>
           {EVIDENCE_QUALITY_ASSESSMENTS.map((profile) => (
-            <label key={profile.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', padding: '3px 0' }}>
-              <input
-                type="radio"
-                name="Evidence quality assessment"
-                value={profile.key}
-                checked={componentKeys.evidenceQualityAssessmentKey === profile.key}
-                onChange={() => setKey('evidenceQualityAssessmentKey', profile.key)}
-                style={{ marginTop: 2, flexShrink: 0 }}
-              />
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#1a1410' }}>{profile.name}</div>
-                <div style={{ fontSize: 10, color: '#a09080' }}>{profile.description}</div>
-              </div>
-            </label>
+            <div key={profile.key} style={{ border: '1px solid #ede8e2', borderRadius: 6, background: 'white', padding: '8px 10px' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', padding: '3px 0' }}>
+                <input
+                  type="radio"
+                  name="Evidence quality assessment"
+                  value={profile.key}
+                  checked={componentKeys.evidenceQualityAssessmentKey === profile.key}
+                  onChange={() => setKey('evidenceQualityAssessmentKey', profile.key)}
+                  style={{ marginTop: 2, flexShrink: 0 }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#1a1410' }}>{profile.name}</div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setQualityExpanded(prev => ({ ...prev, [profile.key]: !prev[profile.key] }))
+                      }}
+                      style={{ border: 'none', background: 'transparent', color: '#706050', cursor: 'pointer', fontSize: 13, fontWeight: 700, padding: '0 2px' }}
+                      title={qualityExpanded[profile.key] ? 'Hide content' : 'Show content'}
+                      aria-label={qualityExpanded[profile.key] ? 'Hide content' : 'Show content'}
+                    >
+                      {qualityExpanded[profile.key] ? '⌄' : '>'}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 10, color: '#a09080' }}>{profile.description}</div>
+                </div>
+              </label>
+              {qualityExpanded[profile.key] && (
+                <pre style={{
+                  margin: '8px 0 0',
+                  padding: '8px 10px',
+                  background: '#faf8f5',
+                  border: '1px solid #e8e2db',
+                  borderRadius: 6,
+                  color: '#403830',
+                  fontSize: 10,
+                  lineHeight: 1.45,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                }}>
+{`maxLength: ${profile.maxLength}
+lengthWeight: ${profile.lengthWeight}
+numberBonus: ${profile.numberBonus}
+quoteBonus: ${profile.quoteBonus}
+actionVerbBonus: ${profile.actionVerbBonus}`}
+                </pre>
+              )}
+            </div>
           ))}
         </div>
       </div>

@@ -42,15 +42,17 @@ set settings = jsonb_set(
     '{evidence_display_settings_key}',
     to_jsonb(coalesce(
       nullif(settings->>'evidence_display_settings_key', ''),
-      nullif(settings->>'evidence_preset_key', '')
-    ))
+      nullif(settings->>'evidence_preset_key', ''),
+      'standard_balanced'
+    )),
+    true
   ),
   '{evidence_quality_assessment_key}',
   to_jsonb(coalesce(
     nullif(settings->>'evidence_quality_assessment_key', ''),
     'quality_v1_balanced'
-  ))
-)
-where settings is not null;
+  )),
+  true
+);
 
 commit;

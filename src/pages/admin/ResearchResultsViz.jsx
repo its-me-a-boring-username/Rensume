@@ -141,6 +141,48 @@ function MultiSelectFilter({ label, options, selected, setSelected, placeholder 
   )
 }
 
+function VariableDefinitionCard({ title, description, content }) {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <div style={{ border: "1px solid #ede8e2", borderRadius: 6, background: "white", padding: "8px 10px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1410" }}>{title}</div>
+          <div style={{ fontSize: 10, color: "#a09080", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{description || "Definition available."}</div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          style={{ border: "none", background: "transparent", color: "#706050", cursor: "pointer", fontSize: 13, fontWeight: 700, padding: "0 2px" }}
+          title={expanded ? "Hide content" : "Show content"}
+          aria-label={expanded ? "Hide content" : "Show content"}
+        >
+          {expanded ? "⌄" : ">"}
+        </button>
+      </div>
+      {expanded && (
+        <pre
+          style={{
+            margin: "8px 0 0",
+            padding: "8px 10px",
+            background: "#faf8f5",
+            border: "1px solid #e8e2db",
+            borderRadius: 6,
+            color: "#403830",
+            fontSize: 10,
+            lineHeight: 1.45,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+          }}
+        >
+          {content || "No content recorded."}
+        </pre>
+      )}
+    </div>
+  )
+}
+
 function BarChart({ rows }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -370,6 +412,72 @@ export default function ResearchResultsViz() {
     return true
   }), [activeSourceRows, selectedModels, selectedExtract, selectedEvidence, selectedFnDefs, selectedRules, selectedEvidenceQualityAssessment, selectedTag, selectedRunId])
 
+  const selectedRuleDef = useMemo(
+    () => selectedRules === "ALL" ? null : (CLASSIFICATION_RULES.find((x) => x.name === selectedRules || x.key === selectedRules) || null),
+    [selectedRules]
+  )
+  const selectedEvidenceDef = useMemo(
+    () => selectedEvidence === "ALL" ? null : (EVIDENCE_INSTRUCTIONS.find((x) => x.name === selectedEvidence || x.key === selectedEvidence) || null),
+    [selectedEvidence]
+  )
+  const selectedExtractDef = useMemo(
+    () => selectedExtract === "ALL" ? null : (EXTRACT_PROMPTS.find((x) => x.name === selectedExtract || x.key === selectedExtract) || null),
+    [selectedExtract]
+  )
+  const selectedFnDefsDef = useMemo(
+    () => selectedFnDefs === "ALL" ? null : (FN_DEFINITIONS.find((x) => x.name === selectedFnDefs || x.key === selectedFnDefs) || null),
+    [selectedFnDefs]
+  )
+  const selectedQualityDef = useMemo(
+    () => selectedEvidenceQualityAssessment === "ALL" ? null : (EVIDENCE_QUALITY_ASSESSMENTS.find((x) => x.name === selectedEvidenceQualityAssessment || x.key === selectedEvidenceQualityAssessment) || null),
+    [selectedEvidenceQualityAssessment]
+  )
+
+  const activeVariableDefinitions = useMemo(() => {
+    const items = []
+    if (selectedRuleDef) {
+      items.push({
+        key: "rules",
+        title: `Classification rules: ${selectedRuleDef.name}`,
+        description: selectedRuleDef.description,
+        content: selectedRuleDef.content,
+      })
+    }
+    if (selectedEvidenceDef) {
+      items.push({
+        key: "evidence",
+        title: `Evidence instructions: ${selectedEvidenceDef.name}`,
+        description: selectedEvidenceDef.description,
+        content: selectedEvidenceDef.content,
+      })
+    }
+    if (selectedExtractDef) {
+      items.push({
+        key: "extract",
+        title: `Extract prompt: ${selectedExtractDef.name}`,
+        description: selectedExtractDef.description,
+        content: selectedExtractDef.content,
+      })
+    }
+    if (selectedFnDefsDef) {
+      items.push({
+        key: "fn_defs",
+        title: `Function level definitions: ${selectedFnDefsDef.name}`,
+        description: selectedFnDefsDef.description,
+        content: selectedFnDefsDef.content,
+      })
+    }
+    if (selectedQualityDef) {
+      items.push({
+        key: "quality",
+        title: `Evidence quality assessment: ${selectedQualityDef.name}`,
+        description: selectedQualityDef.description,
+        content: `maxLength: ${selectedQualityDef.maxLength}\nlengthWeight: ${selectedQualityDef.lengthWeight}\nnumberBonus: ${selectedQualityDef.numberBonus}\nquoteBonus: ${selectedQualityDef.quoteBonus}\nactionVerbBonus: ${selectedQualityDef.actionVerbBonus}`,
+      })
+    }
+    return items
+  }, [selectedRuleDef, selectedEvidenceDef, selectedExtractDef, selectedFnDefsDef, selectedQualityDef])
+
   const groupedAccuracy = useMemo(() => {
     const map = new Map()
     for (const r of filteredRows) {
@@ -502,6 +610,22 @@ export default function ResearchResultsViz() {
             </select>
           </div>
         </div>
+
+        {activeVariableDefinitions.length > 0 && (
+          <div style={{ marginTop: 12, borderTop: "1px solid #e0dbd4", paddingTop: 12 }}>
+            <div style={{ ...label9, marginBottom: 10 }}>Selected Variable Definitions</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 12px" }}>
+              {activeVariableDefinitions.map((item) => (
+                <VariableDefinitionCard
+                  key={item.key}
+                  title={item.title}
+                  description={item.description}
+                  content={item.content}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {loading ? (
