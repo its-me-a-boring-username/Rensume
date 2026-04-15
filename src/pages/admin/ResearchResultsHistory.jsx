@@ -11,7 +11,7 @@ import {
   CLASSIFICATION_RULES,
   EVIDENCE_INSTRUCTIONS,
   EXTRACT_PROMPTS,
-  EVIDENCE_SELECTION_PRESETS,
+  EVIDENCE_QUALITY_ASSESSMENTS,
   FN_DEFINITIONS,
 } from "../../lib/researchClassifier.js"
 
@@ -29,7 +29,7 @@ const RULE_NAME_MAP = Object.fromEntries(CLASSIFICATION_RULES.map(x => [x.key, x
 const EVIDENCE_NAME_MAP = Object.fromEntries(EVIDENCE_INSTRUCTIONS.map(x => [x.key, x.name]))
 const EXTRACT_NAME_MAP = Object.fromEntries(EXTRACT_PROMPTS.map(x => [x.key, x.name]))
 const FN_DEFS_NAME_MAP = Object.fromEntries(FN_DEFINITIONS.map(x => [x.key, x.name]))
-const EVIDENCE_PRESET_NAME_MAP = Object.fromEntries(EVIDENCE_SELECTION_PRESETS.map(x => [x.key, x.name]))
+const EVIDENCE_QUALITY_ASSESSMENT_NAME_MAP = Object.fromEntries(EVIDENCE_QUALITY_ASSESSMENTS.map(x => [x.key, x.name]))
 
 function formatDate(ts) {
   if (!ts) return "Unknown date"
@@ -192,7 +192,9 @@ function RunHeader({ run, variantRows }) {
   const extractPrompt = formatHeaderValue(variantRows, settings, "extract_key", "extract_key", EXTRACT_NAME_MAP)
   const evidence = formatHeaderValue(variantRows, settings, "evidence_key", "evidence_key", EVIDENCE_NAME_MAP)
   const fnDefs = formatHeaderValue(variantRows, settings, "fn_defs_key", "fn_defs_key", FN_DEFS_NAME_MAP)
-  const evidencePreset = formatHeaderValue(variantRows, settings, "evidence_preset_key", "evidence_preset_key", EVIDENCE_PRESET_NAME_MAP)
+  const evidenceQualityAssessment = formatHeaderValue(variantRows, settings, "evidence_quality_assessment_key", "evidence_quality_assessment_key", EVIDENCE_QUALITY_ASSESSMENT_NAME_MAP)
+  const evidenceMaxSnippets = Number(settings.evidence_max_snippets)
+  const evidenceJoiner = typeof settings.evidence_joiner === "string" ? settings.evidence_joiner : ""
 
   const blindFromRows = firstDefined(variantRows, "blind_mode")
   const blindMode = blindFromRows !== null
@@ -204,7 +206,9 @@ function RunHeader({ run, variantRows }) {
     { label: "Rules", value: rules },
     { label: "Extraction Prompt", value: extractPrompt },
     { label: "Evidence", value: evidence },
-    { label: "Evidence Selection", value: evidencePreset },
+    { label: "Evidence Quality Assessment", value: evidenceQualityAssessment },
+    { label: "Evidence Max Snippets", value: Number.isFinite(evidenceMaxSnippets) && evidenceMaxSnippets > 0 ? String(evidenceMaxSnippets) : "Not recorded" },
+    { label: "Evidence Joiner", value: evidenceJoiner || "Not recorded" },
     { label: "Function Level Definitions", value: fnDefs },
   ]
   const runDate = formatDate(run.created_at)
@@ -387,20 +391,11 @@ export default function ResearchResultsHistory() {
       setVariantLoading(true)
       setVariantError("")
 
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from("research_run_results")
-        .select("id, run_id, variant_key, variant_label, model_string, model_key, model_label, blind_mode, rules_key, evidence_key, extract_key, fn_defs_key, evidence_preset_key, classifications, summary, strengths, functions")
+        .select("id, run_id, variant_key, variant_label, model_string, model_key, model_label, blind_mode, rules_key, evidence_key, extract_key, fn_defs_key, evidence_display_settings_key, evidence_quality_assessment_key, classifications, summary, strengths, functions")
         .eq("run_id", selectedRunId)
         .order("variant_key", { ascending: true })
-      if (error && /variant_label|model_label|model_key|blind_mode|rules_key|evidence_key|extract_key|fn_defs_key|evidence_preset_key|column/i.test(error.message || "")) {
-        const legacy = await supabase
-          .from("research_run_results")
-          .select("id, run_id, variant_key, model_string, classifications, summary, strengths, functions")
-          .eq("run_id", selectedRunId)
-          .order("variant_key", { ascending: true })
-        data = legacy.data
-        error = legacy.error
-      }
 
       if (cancelled) return
 

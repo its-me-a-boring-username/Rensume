@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import { supabase } from "../../lib/supabase.js"
 import {
   AVAILABLE_MODELS, CLASSIFICATION_RULES, EVIDENCE_INSTRUCTIONS,
-  EXTRACT_PROMPTS, FN_DEFINITIONS, EVIDENCE_SELECTION_PRESETS, DEFAULT_SETTINGS,
+  EXTRACT_PROMPTS, FN_DEFINITIONS, EVIDENCE_QUALITY_ASSESSMENTS, DEFAULT_SETTINGS,
   isPlaceholderOption,
   classifyRoles, getSummary, aggregateLabels, m2y, seniority,
 } from "../../lib/researchClassifier.js"
@@ -116,11 +116,11 @@ function ResumeSelector({ resumes, selectedIds, onToggle, onSelectAll, onClearAl
 function ComponentSelector({ label, options, selectedKey, onChange }) {
   const visibleOptions = options.filter((opt) => !isPlaceholderOption(opt))
   return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#1a1410', marginBottom: 8 }}>{label}</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <div style={{ marginBottom: 24, paddingTop: 4, paddingBottom: 2 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#1a1410', marginBottom: 12 }}>{label}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {visibleOptions.map(opt => (
-          <label key={opt.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
+          <label key={opt.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', padding: '2px 0' }}>
             <input
               type="radio"
               name={label}
@@ -177,30 +177,59 @@ function SettingsPanel({ selectedModels, setSelectedModels, blind, setBlind, com
         </button>
       </div>
 
-      <div style={{ borderTop: '1px solid #e0dbd4', paddingTop: 16, marginBottom: 18 }}>
-        <div style={{ ...label9, marginBottom: 12 }}>Evidence Selection</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {EVIDENCE_SELECTION_PRESETS.map((preset) => (
-            <label key={preset.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
+      <div style={{ borderTop: '1px solid #e0dbd4', paddingTop: 20, marginBottom: 22 }}>
+        <div style={{ ...label9, marginBottom: 14 }}>Evidence Output</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 28px' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#1a1410' }}>Max snippets</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={componentKeys.evidenceMaxSnippets ?? "2"}
+              onChange={(e) => setKey('evidenceMaxSnippets', e.target.value)}
+              placeholder="2"
+              style={{ width: '100%', padding: '8px 10px', fontSize: 12, border: '1px solid #d8d0c4', borderRadius: 6, fontFamily: 'inherit' }}
+            />
+            <span style={{ fontSize: 10, color: '#a09080' }}>How many canonical snippets to display per function label.</span>
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#1a1410' }}>Joiner text</span>
+            <input
+              type="text"
+              value={componentKeys.evidenceJoiner ?? " and "}
+              onChange={(e) => setKey('evidenceJoiner', e.target.value)}
+              placeholder=" and "
+              style={{ width: '100%', padding: '8px 10px', fontSize: 12, border: '1px solid #d8d0c4', borderRadius: 6, fontFamily: 'inherit' }}
+            />
+            <span style={{ fontSize: 10, color: '#a09080' }}>Text inserted between multiple snippets.</span>
+          </label>
+        </div>
+      </div>
+
+      <div style={{ borderTop: '1px solid #e0dbd4', paddingTop: 20, marginBottom: 22 }}>
+        <div style={{ ...label9, marginBottom: 14 }}>Evidence Quality Assessment</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 28px' }}>
+          {EVIDENCE_QUALITY_ASSESSMENTS.map((profile) => (
+            <label key={profile.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', padding: '3px 0' }}>
               <input
                 type="radio"
-                name="Evidence selection"
-                value={preset.key}
-                checked={componentKeys.evidencePresetKey === preset.key}
-                onChange={() => setKey('evidencePresetKey', preset.key)}
+                name="Evidence quality assessment"
+                value={profile.key}
+                checked={componentKeys.evidenceQualityAssessmentKey === profile.key}
+                onChange={() => setKey('evidenceQualityAssessmentKey', profile.key)}
                 style={{ marginTop: 2, flexShrink: 0 }}
               />
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#1a1410' }}>{preset.name}</div>
-                <div style={{ fontSize: 10, color: '#a09080' }}>{preset.description}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#1a1410' }}>{profile.name}</div>
+                <div style={{ fontSize: 10, color: '#a09080' }}>{profile.description}</div>
               </div>
             </label>
           ))}
         </div>
       </div>
 
-      <div style={{ borderTop: '1px solid #e0dbd4', paddingTop: 16 }}>
-        <div style={{ ...label9, marginBottom: 14 }}>Prompt components — select one per category</div>
+      <div style={{ borderTop: '1px solid #e0dbd4', paddingTop: 20 }}>
+        <div style={{ ...label9, marginBottom: 16 }}>Prompt components — select one per category</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px' }}>
           <ComponentSelector label="Classification rules" options={CLASSIFICATION_RULES} selectedKey={componentKeys.rulesKey} onChange={key => setKey('rulesKey', key)} />
           <ComponentSelector label="Evidence instructions" options={EVIDENCE_INSTRUCTIONS} selectedKey={componentKeys.evidenceKey} onChange={key => setKey('evidenceKey', key)} />
@@ -386,7 +415,7 @@ export default function ResearchRunAnalysis() {
   const [notes,         setNotes]         = useState('')
 
   // Settings
-  const [selectedModels,  setSelectedModels]  = useState(['sonnet_4', 'haiku_4_5'])
+  const [selectedModels,  setSelectedModels]  = useState(['sonnet_4_5', 'haiku_4_5'])
   const [blind,           setBlind]           = useState(false)
   const [componentKeys,   setComponentKeys]   = useState(DEFAULT_SETTINGS)
 
@@ -409,7 +438,7 @@ export default function ResearchRunAnalysis() {
     evidence: EVIDENCE_INSTRUCTIONS.find(e => e.key === componentKeys.evidenceKey),
     extract:  EXTRACT_PROMPTS.find(e => e.key === componentKeys.extractKey),
     fnDefs:   FN_DEFINITIONS.find(f => f.key === componentKeys.fnDefsKey),
-    evidencePreset: EVIDENCE_SELECTION_PRESETS.find(p => p.key === componentKeys.evidencePresetKey) || EVIDENCE_SELECTION_PRESETS[2],
+    evidenceQualityAssessment: EVIDENCE_QUALITY_ASSESSMENTS.find(p => p.key === componentKeys.evidenceQualityAssessmentKey) || EVIDENCE_QUALITY_ASSESSMENTS[0],
   })
 
   const buildVariants = () =>
@@ -458,7 +487,10 @@ export default function ResearchRunAnalysis() {
         evidence_key: componentKeys.evidenceKey,
         extract_key:  componentKeys.extractKey,
         fn_defs_key:  componentKeys.fnDefsKey,
-        evidence_preset_key: componentKeys.evidencePresetKey,
+        evidence_display_settings_key: componentKeys.evidenceDisplaySettingsKey,
+        evidence_quality_assessment_key: componentKeys.evidenceQualityAssessmentKey,
+        evidence_max_snippets: Number(componentKeys.evidenceMaxSnippets) || 2,
+        evidence_joiner: String(componentKeys.evidenceJoiner ?? " and "),
       }
 
       const { data: run, error: runErr } = await supabase
@@ -484,7 +516,9 @@ export default function ResearchRunAnalysis() {
             EVIDENCE_INSTRUCTIONS.find(x => x.key === componentKeys.evidenceKey)?.name || componentKeys.evidenceKey,
             EXTRACT_PROMPTS.find(x => x.key === componentKeys.extractKey)?.name || componentKeys.extractKey,
             FN_DEFINITIONS.find(x => x.key === componentKeys.fnDefsKey)?.name || componentKeys.fnDefsKey,
-            EVIDENCE_SELECTION_PRESETS.find(x => x.key === componentKeys.evidencePresetKey)?.name || componentKeys.evidencePresetKey,
+            `Evidence display: ${componentKeys.evidenceDisplaySettingsKey}`,
+            EVIDENCE_QUALITY_ASSESSMENTS.find(x => x.key === componentKeys.evidenceQualityAssessmentKey)?.name || componentKeys.evidenceQualityAssessmentKey,
+            `max:${Number(componentKeys.evidenceMaxSnippets) || 2}`,
           ].join(" | ")
           return {
             run_id:          run.id,
@@ -497,7 +531,8 @@ export default function ResearchRunAnalysis() {
             evidence_key:    componentKeys.evidenceKey,
             extract_key:     componentKeys.extractKey,
             fn_defs_key:     componentKeys.fnDefsKey,
-            evidence_preset_key: componentKeys.evidencePresetKey,
+            evidence_display_settings_key: componentKeys.evidenceDisplaySettingsKey,
+            evidence_quality_assessment_key: componentKeys.evidenceQualityAssessmentKey,
             variant_label:   variantLabel,
             classifications: r.classifications || [],
             summary:         r.summary || '',
@@ -510,7 +545,7 @@ export default function ResearchRunAnalysis() {
         let { error: resultsErr } = await supabase
           .from('research_run_results')
           .insert(resultRows)
-        if (resultsErr && /column|schema|variant_label|model_key|blind_mode|evidence_preset_key/i.test(resultsErr.message || '')) {
+        if (resultsErr && /column|schema|variant_label|model_key|blind_mode|evidence_display_settings_key|evidence_quality_assessment_key/i.test(resultsErr.message || '')) {
           const legacyRows = resultRows.map(r => ({
             run_id: r.run_id,
             variant_key: r.variant_key,
@@ -580,7 +615,14 @@ export default function ResearchRunAnalysis() {
           classifyRoles(parsedRoles, model, isBlind, components.rules, components.evidence, components.fnDefs),
           getSummary(resume.clean_text, model),
         ])
-        const functions = aggregateLabels(parsedRoles, classifs, componentKeys.evidencePresetKey)
+        const functions = aggregateLabels(
+          parsedRoles,
+          classifs,
+          componentKeys.evidenceDisplaySettingsKey,
+          componentKeys.evidenceQualityAssessmentKey,
+          componentKeys.evidenceMaxSnippets,
+          componentKeys.evidenceJoiner
+        )
 
         allClassifications[key] = classifs
         allResults[key]         = { ...summary, functions }

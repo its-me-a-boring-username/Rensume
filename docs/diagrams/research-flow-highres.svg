@@ -1,0 +1,120 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="2800" height="2200" viewBox="0 0 2800 2200">
+  <defs>
+    <style>
+      .title { font: 700 44px 'Segoe UI', Arial, sans-serif; fill:#1f2937; }
+      .subtitle { font: 500 24px 'Segoe UI', Arial, sans-serif; fill:#6b7280; }
+      .box { fill:#ffffff; stroke:#94a3b8; stroke-width:2.2; rx:16; }
+      .section { font:700 26px 'Segoe UI', Arial, sans-serif; fill:#0f172a; }
+      .text { font:500 21px 'Segoe UI', Arial, sans-serif; fill:#334155; }
+      .small { font:500 19px 'Segoe UI', Arial, sans-serif; fill:#475569; }
+      .var { font:700 20px 'Segoe UI', Arial, sans-serif; fill:#7c3aed; }
+      .arrow { stroke:#334155; stroke-width:3; fill:none; marker-end:url(#m); }
+      .lane { fill:#f8fafc; stroke:#cbd5e1; stroke-width:2; rx:18; }
+    </style>
+    <marker id="m" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#334155"/>
+    </marker>
+  </defs>
+
+  <text x="70" y="80" class="title">Rensume Research Pipeline (Where Variables Affect Output)</text>
+  <text x="70" y="118" class="subtitle">High-level flow only: process step vs variable-controlled branch</text>
+
+  <rect x="50" y="150" width="2700" height="470" class="lane"/>
+  <text x="80" y="195" class="section">A) Ingestion + Parse (one-time per resume)</text>
+
+  <rect x="90" y="230" width="620" height="140" class="box"/>
+  <text x="120" y="275" class="section">1. Resume Upload</text>
+  <text x="120" y="310" class="text">Raw resume text stored</text>
+
+  <rect x="780" y="230" width="640" height="140" class="box"/>
+  <text x="810" y="275" class="section">2. Extract Prompt Runs</text>
+  <text x="810" y="310" class="small">Variable: Extract Prompt (v1/v2...)</text>
+
+  <rect x="1490" y="230" width="620" height="140" class="box"/>
+  <text x="1520" y="275" class="section">3. Parsed Roles Snapshot</text>
+  <text x="1520" y="310" class="text">role title, company, dates, months</text>
+
+  <rect x="2180" y="230" width="520" height="140" class="box"/>
+  <text x="2210" y="275" class="section">4. Stored on Resume</text>
+  <text x="2210" y="310" class="text">Reused across later runs</text>
+
+  <path d="M710 300 L780 300" class="arrow"/>
+  <path d="M1420 300 L1490 300" class="arrow"/>
+  <path d="M2110 300 L2180 300" class="arrow"/>
+
+  <rect x="50" y="660" width="2700" height="760" class="lane"/>
+  <text x="80" y="705" class="section">B) Run Analysis (per run, per model variant)</text>
+
+  <rect x="90" y="740" width="620" height="170" class="box"/>
+  <text x="120" y="785" class="section">5. Choose Run Settings</text>
+  <text x="120" y="820" class="small">Variables: model, blind mode, rules,</text>
+  <text x="120" y="850" class="small">evidence instructions, fn defs, notes</text>
+
+  <rect x="780" y="740" width="640" height="170" class="box"/>
+  <text x="810" y="785" class="section">6. Label Roles by Variant</text>
+  <text x="810" y="820" class="small">Model applies function labels +</text>
+  <text x="810" y="850" class="small">supporting evidence candidates</text>
+
+  <rect x="1490" y="740" width="620" height="170" class="box"/>
+  <text x="1520" y="785" class="section">7. Canonical Evidence Selection</text>
+  <text x="1520" y="820" class="small">Variable: Evidence Selection Preset</text>
+  <text x="1520" y="850" class="small">(strict / balanced / website / broad)</text>
+
+  <rect x="2180" y="740" width="520" height="170" class="box"/>
+  <text x="2210" y="785" class="section">8. Aggregate Months</text>
+  <text x="2210" y="820" class="small">Sum months per function label</text>
+  <text x="2210" y="850" class="small">(dedupe role+label)</text>
+
+  <path d="M710 825 L780 825" class="arrow"/>
+  <path d="M1420 825 L1490 825" class="arrow"/>
+  <path d="M2110 825 L2180 825" class="arrow"/>
+
+  <rect x="90" y="980" width="1120" height="220" class="box"/>
+  <text x="120" y="1025" class="section">9. Persist Run + Variant Rows</text>
+  <text x="120" y="1060" class="small">research_runs: run-level settings + metadata</text>
+  <text x="120" y="1090" class="small">research_run_results: per-variant summary/strengths/</text>
+  <text x="120" y="1120" class="small">functions/classifications + explicit variant fields</text>
+  <text x="120" y="1155" class="var">Includes evidence_preset_key for filtering/grouping</text>
+
+  <rect x="1290" y="980" width="1410" height="220" class="box"/>
+  <text x="1320" y="1025" class="section">10. Run Screen Rendering</text>
+  <text x="1320" y="1060" class="small">Dot grid: role-level assignments by variant</text>
+  <text x="1320" y="1090" class="small">Function list: aggregated months + canonical evidence</text>
+  <text x="1320" y="1120" class="small">Diagnostic toggle: supporting role evidence</text>
+  <text x="1320" y="1155" class="var">Canonical evidence should match Review screen</text>
+
+  <path d="M1210 1090 L1290 1090" class="arrow"/>
+
+  <rect x="50" y="1460" width="2700" height="680" class="lane"/>
+  <text x="80" y="1505" class="section">C) Review + Data (post-analysis quality + metrics)</text>
+
+  <rect x="90" y="1545" width="840" height="260" class="box"/>
+  <text x="120" y="1590" class="section">11. Review Queue</text>
+  <text x="120" y="1625" class="small">Shows analyzed resumes/runs pending review</text>
+  <text x="120" y="1655" class="small">Reviewer rates evidence per function label:</text>
+  <text x="120" y="1685" class="small">Accurate / Partial / Inaccurate + missed evidence flags</text>
+  <text x="120" y="1715" class="small">Supports draft vs finalized, reviewer identity, timestamps</text>
+  <text x="120" y="1745" class="small">Coverage metric gates whether run can count in analytics</text>
+
+  <rect x="1000" y="1545" width="760" height="260" class="box"/>
+  <text x="1030" y="1590" class="section">12. Finalize Review</text>
+  <text x="1030" y="1625" class="small">Only finalized/eligible records feed accuracy stats</text>
+  <text x="1030" y="1655" class="small">Unreviewed or draft stays excluded</text>
+  <text x="1030" y="1685" class="var">Control: review status + coverage thresholds</text>
+
+  <rect x="1830" y="1545" width="870" height="260" class="box"/>
+  <text x="1860" y="1590" class="section">13. Data / Visualization Page</text>
+  <text x="1860" y="1625" class="small">Filters: model, rules, extraction, evidence instructions,</text>
+  <text x="1860" y="1655" class="small">fn defs, industry tags, run id dropdown, evidence preset</text>
+  <text x="1860" y="1685" class="small">Deleted runs excluded by default</text>
+  <text x="1860" y="1715" class="small">Charts: overall accuracy + variable-level breakdowns</text>
+
+  <path d="M930 1675 L1000 1675" class="arrow"/>
+  <path d="M1760 1675 L1830 1675" class="arrow"/>
+
+  <rect x="90" y="1870" width="2610" height="220" class="box"/>
+  <text x="120" y="1915" class="section">D) Governance / Data Integrity Rules</text>
+  <text x="120" y="1950" class="small">Soft delete on runs requires reason; audit snapshot stored permanently.</text>
+  <text x="120" y="1980" class="small">Default list/query excludes deleted runs. Legacy rows use settings fallbacks for missing explicit fields.</text>
+  <text x="120" y="2010" class="small">Critical parity rule: Run and Review must display the same canonical function evidence source.</text>
+</svg>
