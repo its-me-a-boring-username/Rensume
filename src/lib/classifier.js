@@ -4,6 +4,10 @@
 
 import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels } from './taxonomy.js'
 
+const MAX_EVIDENCE_LINES_PER_LABEL = 2
+const MAX_INDUSTRIES_RETURNED = 3
+const MAX_KNOWLEDGE_AREAS_RETURNED = 6
+
 // --- Prompts ---------------------------------------------------------------
 
 function buildExtractSystem() {
@@ -237,18 +241,27 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
       if (!canonicalName) continue
 
       if (!byName.has(canonicalName)) {
-        byName.set(canonicalName, { name: canonicalName, months: 0, evidenceRows: [] })
+        byName.set(canonicalName, {
+          name: canonicalName,
+          months: 0,
+          evidenceRows: [],
+          roleIndexes: new Set(),
+          latestRoleIndex: Number.POSITIVE_INFINITY,
+        })
       }
+      const rowAgg = byName.get(canonicalName)
+      rowAgg.roleIndexes.add(roleIndex)
+      if (roleIndex < rowAgg.latestRoleIndex) rowAgg.latestRoleIndex = roleIndex
 
       const dedupeKey = `${roleIndex}::${canonicalName}`
       if (!monthsAdded.has(dedupeKey)) {
-        byName.get(canonicalName).months += Number(role.months) || 0
+        rowAgg.months += Number(role.months) || 0
         monthsAdded.add(dedupeKey)
       }
 
       const evidence = String(label?.evidence || '').trim()
       if (evidence) {
-        byName.get(canonicalName).evidenceRows.push({ role_index: roleIndex, evidence })
+        rowAgg.evidenceRows.push({ role_index: roleIndex, evidence })
       }
     }
   }
@@ -263,14 +276,31 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
       if (seen.has(k)) continue
       seen.add(k)
       picked.push(t)
-      if (picked.length >= 2) break
+      if (picked.length >= MAX_EVIDENCE_LINES_PER_LABEL) break
     }
     return picked.join(' • ')
   }
 
   return Array.from(byName.values())
-    .map((x) => ({ name: x.name, months: x.months, evidence: toEvidence(x.evidenceRows) }))
-    .sort((a, b) => (b.months - a.months) || a.name.localeCompare(b.name))
+    .map((x) => ({
+      name: x.name,
+      months: x.months,
+      evidence: toEvidence(x.evidenceRows),
+      _role_count: x.roleIndexes.size,
+      _latest_role_index: Number.isFinite(x.latestRoleIndex) ? x.latestRoleIndex : Number.MAX_SAFE_INTEGER,
+    }))
+    .sort((a, b) =>
+      (b.months - a.months) ||
+      (b._role_count - a._role_count) ||
+      (a._latest_role_index - b._latest_role_index) ||
+      a.name.localeCompare(b.name)
+    )
+    .map(({ _role_count, _latest_role_index, ...row }) => row)
+}
+
+function capTopLabels(labels, maxCount) {
+  if (!Array.isArray(labels) || maxCount <= 0) return []
+  return labels.slice(0, maxCount)
 }
 
 async function callAPI(system, userContent, model) {
@@ -376,6 +406,8 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   const knowledgeAreasOut = convertMonthsToYears(
     aggregateRoleAssignments(rolePayload.roles, kaAssignments, 'knowledge_areas', knowledgeAreaNames)
   )
+  const cappedIndustries = capTopLabels(industriesOut, MAX_INDUSTRIES_RETURNED)
+  const cappedKnowledgeAreas = capTopLabels(knowledgeAreasOut, MAX_KNOWLEDGE_AREAS_RETURNED)
 
   return {
     summary: String(shared?.summary || ''),
@@ -383,8 +415,8 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
     total_years: totalYears,
     total_months: totalMonths,
     functions,
-    knowledge_areas: knowledgeAreasOut,
-    industries: industriesOut,
+    knowledge_areas: cappedKnowledgeAreas,
+    industries: cappedIndustries,
     tools: Array.isArray(shared?.tools) ? shared.tools : [],
     credentials: Array.isArray(shared?.credentials) ? shared.credentials : [],
     framework: 'soc_minor',
