@@ -1,121 +1,282 @@
-// src/lib/classifier.js
-// Rensume resume classifier.
-// Makes two API calls — shared dimensions first, then SOC Minor knowledge areas.
-// Both calls go through the Vercel /api/chat proxy to keep the API key off the client.
+﻿// src/lib/classifier.js
+// Rensume live classifier.
+// Flow: extract roles -> classify role-level labels/evidence -> deterministic month aggregation in code.
 
 import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels } from './taxonomy.js'
 
-// ─── Prompts ──────────────────────────────────────────────────────────────────
+// --- Prompts ---------------------------------------------------------------
+
+function buildExtractSystem() {
+  return `You are a resume parser for Rensume. Extract every professional role and return ONLY valid JSON.
+
+Return this exact structure:
+{"roles":[{"title":"","employer":"","start_raw":"","end_raw":"","text":""}]}
+
+Rules:
+- Copy start_raw and end_raw exactly as written in the resume.
+- Keep each role separate. Do not merge roles from the same employer.
+- Include all role text and bullet points in "text".
+- If end date is missing but role appears current, set end_raw to "Present".
+- If a field is unknown, use an empty string.
+- No markdown, no backticks, no commentary.`
+}
 
 function buildSharedSystem(functionLevels, industries) {
   return `///TASK DESCRIPTION///
-You are a resume taxonomy classifier for Rensume, a recruiting platform that helps recruiters understand the strengths and competencies of candidates who've had non-linear careers.
+You are a resume taxonomy classifier for Rensume.
+You will receive parsed role data. Classify labels per role and provide evidence.
 
-Extract all dimensions and respond ONLY with valid JSON, no markdown, no preamble, no backticks.
+Return ONLY valid JSON. No markdown, no preamble, no backticks.
 
-///THE RULES///
-//math//
-total_months: calculate from actual work history dates, not self-reported summaries. Return as total months (e.g. 8 years = 96 months).
-Function months: reflect time spent operating at that level — they do NOT need to sum to total_months. A candidate can operate at multiple function levels within the same role simultaneously.
-Industry months: do NOT need to sum to total_months. A company can map to multiple industries simultaneously (e.g. a fintech company counts toward both Information and Finance & Insurance).
-Knowledge Area months: do NOT need to sum to total_months. A single role may require expertise in multiple knowledge areas at once. It is also possible for someone to hold multiple roles at one time.
+///CRITICAL RULES///
+- Use only the provided parsed role data.
+- For each role_index, assign zero or more function labels and zero or more industry labels.
+- Function levels are independent. Do not infer a higher level by combining two lower-level signals.
+- Use exact label names from the provided lists.
+- Evidence should be a direct quote or close paraphrase from the role text.
+- Use single quotes inside evidence strings.
 
-//evidence handling//
-For ALL Evidence: 
-- Only use AI synthesis (clearly marked with 'Based on...') when no specific resume text supports the classification.
-- Do NOT reuse the same quote across multiple functions or knowledge areas
-For function field evidence: 
-- ALWAYS prefer a direct quote or paraphrase from the resume. 
-- Use single quotes not double quotes inside evidence text. 
-For knowledge area evidence: 
-- provide 2-4 bullet points of evidence using partial quotes from the resume, each tagged with company and role. Format as: "· Company (Role): 'partial quote or paraphrase'" separated by the · character. 
-For industry evidence: 
-- One sentence explaining which companies map to this industry and why.
-
-//function levels//
-CRITICAL for function evidence: The evidence must justify WHY this specific function level applies.
-CRITICAL for function classification: Function levels are independent and mutually exclusive in what they describe. Do NOT infer a higher function level by combining evidence from two lower levels. Each function level must be justified by its own direct evidence. If a candidate shows both People Manager work and Strategic Advisor work, credit both separately — do not upgrade either to Strategic Manager. Do NOT suppress a valid lower-level function tag because a higher one is also present.
 Function levels list:
 ${formatFunctionLevels(functionLevels)}
 
-//knowledge areas//
-Classification handled in a separate call. See buildKnowledgeAreaSystem in classifier.js
-
-//Industry//
-Industry classification is based on the following NAICS sectors (use the exact name as listed):
+Industry list (exact NAICS sector names):
 ${formatIndustryList(industries)}
 
-Respond ONLY with valid JSON matching this exact structure:
+Respond ONLY with this exact JSON structure:
 {
-  "summary": "one plain sentence describing what this person actually does — maximum 160 characters, no exceptions",
-  "total_months": 0,
-  "strengths": "1-2 sentences highlighting what genuinely sets this candidate apart, referencing specific experience",
-  "functions": [{"name": "Function level name", "months": 0, "evidence": "evidence text"}],
-  "industries": [{"name": "NAICS sector", "months": 0, "evidence": "which companies map here and why"}],
+  "summary": "one plain sentence, max 160 chars",
+  "strengths": "1-2 sentences highlighting differentiators",
   "tools": ["tool or method name"],
-  "credentials": [{"type": "Degree|Certification|License", "name": "", "institution": "", "year": ""}]
+  "credentials": [{"type": "Degree|Certification|License", "name": "", "institution": "", "year": ""}],
+  "role_assignments": [
+    {
+      "role_index": 0,
+      "functions": [{"name": "", "evidence": ""}],
+      "industries": [{"name": "", "evidence": ""}]
+    }
+  ]
 }`
 }
 
-function buildKnowledgeAreaSystem(knowledgeAreas, totalMonths) {
+function buildKnowledgeAreaSystem(knowledgeAreas) {
   return `///TASK DESCRIPTION///
-You are a resume taxonomy classifier for Rensume, a recruiting platform that helps recruiters understand the strengths and competencies of candidates who've had non-linear careers.
+You are a resume taxonomy classifier for Rensume.
+You will receive parsed role data. Classify Knowledge Areas per role using SOC 2018 minor group names.
 
-Extract Knowledge Area / Discipline using SOC 2018 minor group names.
+Return ONLY valid JSON. No markdown, no preamble, no backticks.
 
-///THE RULES///
-- Map what the candidate demonstrably knows and has done. Focus on work performed, not job title.
-- DO NOT collapse distinct types of work into a single category. Each meaningfully different domain must appear as its own entry. Treat overlap as separate dimensions, not a reason to consolidate.
-- DO NOT create additional catch-all categories — compliance, customer operations, and data analysis are separate.
-- Return between 3 and 6 knowledge areas — no more, no fewer.
-- Knowledge area months do NOT need to sum to total_months. A role can draw on multiple knowledge areas simultaneously.
-- The candidate has ${totalMonths} total professional months for context when estimating time in each area.
+///CRITICAL RULES///
+- Use only the provided parsed role data.
+- For each role_index, assign zero or more knowledge area labels.
+- Use exact names from the provided list.
+- Evidence should be direct quote or close paraphrase from role text.
+- Keep coverage broad but precise; avoid collapsing distinct domains.
 
-Use only these SOC 2018 minor group names (use the exact name as listed):
+Allowed knowledge area names (exact):
 ${formatKAList(knowledgeAreas)}
 
-Respond ONLY with valid JSON:
-{"knowledge_areas": [{"name": "", "months": 0, "evidence": ""}]}`
+Respond ONLY with this exact JSON:
+{
+  "role_assignments": [
+    {
+      "role_index": 0,
+      "knowledge_areas": [{"name": "", "evidence": ""}]
+    }
+  ]
+}`
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ---------------------------------------------------------------
 
-/**
- * Convert months to display years (1 decimal place).
- * e.g. 10 months → 0.8y, 18 months → 1.5y
- */
 function monthsToYears(months) {
   return Math.round((Number(months) / 12) * 10) / 10
 }
 
-/**
- * Convert all months fields on an array of items to display years.
- */
 function convertMonthsToYears(items) {
   if (!items?.length) return items
-  return items.map(i => ({
-    ...i,
-    years: monthsToYears(i.months),
-  }))
+  return items.map(i => ({ ...i, years: monthsToYears(i.months) }))
 }
 
-/**
- * Apply seniority band prefix to a function level name.
- * e.g. "Process Manager" + 4 years → "Experienced Process Manager"
- */
 export function getSeniorityLabel(functionName, years) {
   const n = Number(years) || 0
   let band
-  if (n < 2)       band = 'Junior'
-  else if (n < 5)  band = 'Experienced'
-  else if (n < 8)  band = 'Senior'
-  else             band = 'Mature'
+  if (n < 2) band = 'Junior'
+  else if (n < 5) band = 'Experienced'
+  else if (n < 8) band = 'Senior'
+  else band = 'Mature'
   return `${band} ${functionName}`
 }
 
-/**
- * Low-level API call through the Vercel proxy.
- */
+const PRESENT_PATTERNS = [
+  /^present$/i, /^current$/i, /^now$/i, /^ongoing$/i,
+  /^today$/i, /^till\s+date$/i, /^to\s+date$/i,
+  /^-+$/i, /^–+$/i, /^—+$/i,
+]
+
+const MONTH_NAMES = {
+  jan:0,january:0,feb:1,february:1,mar:2,march:2,apr:3,april:3,may:4,
+  jun:5,june:5,jul:6,july:6,aug:7,august:7,sep:8,sept:8,september:8,
+  oct:9,october:9,nov:10,november:10,dec:11,december:11,
+}
+
+function lastDay(year, month) { return new Date(year, month + 1, 0).getDate() }
+
+function parseRawDate(raw) {
+  if (raw === null || raw === undefined || raw.toString().trim() === '') return { type: 'null' }
+  const cleaned = raw.toString().trim().replace(/^(to|through|until|–|-)\s*/i, '').trim()
+  for (const p of PRESENT_PATTERNS) if (p.test(cleaned)) return { type: 'present' }
+
+  const mny = cleaned.match(/^([a-z]+)\.?\s+(\d{4})$/i)
+  if (mny) {
+    const month = MONTH_NAMES[mny[1].toLowerCase()]
+    const year = parseInt(mny[2], 10)
+    if (month !== undefined && !Number.isNaN(year)) return { type: 'date', year, month }
+  }
+
+  const iso = cleaned.match(/^(\d{4})[-/](\d{1,2})$/)
+  if (iso) {
+    const year = parseInt(iso[1], 10)
+    const month = parseInt(iso[2], 10) - 1
+    if (month >= 0 && month <= 11) return { type: 'date', year, month }
+  }
+
+  const msy = cleaned.match(/^(\d{1,2})\/(\d{4})$/)
+  if (msy) {
+    const month = parseInt(msy[1], 10) - 1
+    const year = parseInt(msy[2], 10)
+    if (month >= 0 && month <= 11) return { type: 'date', year, month }
+  }
+
+  if (/^\d{4}$/.test(cleaned)) return { type: 'year_only', year: parseInt(cleaned, 10) }
+  return { type: 'unknown', raw: cleaned }
+}
+
+function toStart(p, nowDate) { return p.type === 'date' ? new Date(p.year, p.month, 1) : p.type === 'present' ? nowDate : null }
+function toEnd(p, nowDate) { return p.type === 'date' ? new Date(p.year, p.month, lastDay(p.year, p.month)) : p.type === 'present' ? nowDate : null }
+function monthsBetween(s, e) { return Math.max(0, (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()) + 1) }
+
+function processExtractedRole(role, nowDate = new Date()) {
+  const sp = parseRawDate(role.start_raw)
+  const ep = parseRawDate(role.end_raw)
+
+  if (sp.type === 'unknown' || ep.type === 'unknown') {
+    return { ...role, months: 0, flagged: true, flag_reason: 'unparsed date', start: null, end: null }
+  }
+  if (sp.type === 'null') {
+    return { ...role, months: 0, flagged: true, flag_reason: 'missing start date', start: null, end: null }
+  }
+
+  const startDate = toStart(sp, nowDate)
+  const endDate = ep.type === 'null' ? nowDate : toEnd(ep, nowDate)
+
+  if (!startDate || !endDate || startDate > endDate) {
+    return { ...role, months: 0, flagged: true, flag_reason: 'invalid date range', start: null, end: null }
+  }
+
+  return {
+    ...role,
+    months: monthsBetween(startDate, endDate),
+    start: startDate.toISOString().slice(0, 10),
+    end: endDate.toISOString().slice(0, 10),
+    flagged: false,
+    flag_reason: null,
+  }
+}
+
+function normalizeExtractedRoles(parsed) {
+  const rawRoles = Array.isArray(parsed?.roles) ? parsed.roles : []
+  return rawRoles.map((r) => processExtractedRole({
+    title: String(r?.title || '').trim(),
+    employer: String(r?.employer || '').trim(),
+    start_raw: String(r?.start_raw || '').trim(),
+    end_raw: String(r?.end_raw || '').trim(),
+    text: String(r?.text || '').trim(),
+  }))
+}
+
+function buildRolePayload(roles) {
+  const clean = (Array.isArray(roles) ? roles : []).filter(r => !r.flagged && (Number(r.months) || 0) > 0)
+  return {
+    roles: clean.map((r, roleIndex) => ({
+      role_index: roleIndex,
+      title: r.title || '',
+      employer: r.employer || '',
+      start_raw: r.start_raw || '',
+      end_raw: r.end_raw || '',
+      start: r.start || '',
+      end: r.end || '',
+      months: Number(r.months) || 0,
+      text: r.text || '',
+    })),
+  }
+}
+
+function buildCanonicalNameMap(names) {
+  const map = new Map()
+  for (const n of names || []) {
+    const name = String(n || '').trim()
+    if (!name) continue
+    map.set(name.toLowerCase(), name)
+  }
+  return map
+}
+
+function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames) {
+  const canonical = buildCanonicalNameMap(allowedNames)
+  const byName = new Map()
+  const monthsAdded = new Set()
+
+  for (const row of Array.isArray(roleAssignments) ? roleAssignments : []) {
+    const roleIndex = Number(row?.role_index)
+    if (!Number.isFinite(roleIndex)) continue
+    const role = roles[roleIndex]
+    if (!role) continue
+
+    const labels = Array.isArray(row?.[fieldKey]) ? row[fieldKey] : []
+    for (const label of labels) {
+      const rawName = String(label?.name || '').trim()
+      if (!rawName) continue
+      const key = rawName.toLowerCase()
+      const canonicalName = canonical.get(key)
+      if (!canonicalName) continue
+
+      if (!byName.has(canonicalName)) {
+        byName.set(canonicalName, { name: canonicalName, months: 0, evidenceRows: [] })
+      }
+
+      const dedupeKey = `${roleIndex}::${canonicalName}`
+      if (!monthsAdded.has(dedupeKey)) {
+        byName.get(canonicalName).months += Number(role.months) || 0
+        monthsAdded.add(dedupeKey)
+      }
+
+      const evidence = String(label?.evidence || '').trim()
+      if (evidence) {
+        byName.get(canonicalName).evidenceRows.push({ role_index: roleIndex, evidence })
+      }
+    }
+  }
+
+  const toEvidence = (rows) => {
+    const seen = new Set()
+    const picked = []
+    for (const row of rows || []) {
+      const t = String(row?.evidence || '').trim()
+      if (!t) continue
+      const k = t.toLowerCase()
+      if (seen.has(k)) continue
+      seen.add(k)
+      picked.push(t)
+      if (picked.length >= 2) break
+    }
+    return picked.join(' • ')
+  }
+
+  return Array.from(byName.values())
+    .map((x) => ({ name: x.name, months: x.months, evidence: toEvidence(x.evidenceRows) }))
+    .sort((a, b) => (b.months - a.months) || a.name.localeCompare(b.name))
+}
+
 async function callAPI(system, userContent) {
   const res = await fetch('/api/chat', {
     method: 'POST',
@@ -142,62 +303,66 @@ async function callAPI(system, userContent) {
   try {
     return JSON.parse(raw)
   } catch {
-    throw new Error('Could not parse classifier response — try again.')
+    throw new Error('Could not parse classifier response. Please try again.')
   }
 }
 
-// ─── Main classifier ──────────────────────────────────────────────────────────
+// --- Main classifier -------------------------------------------------------
 
-/**
- * Classify a resume text using the Rensume taxonomy.
- *
- * Fetches live taxonomy from Supabase, then makes two API calls:
- *   1. Shared dimensions (summary, functions, industries, tools, credentials, strengths)
- *   2. Knowledge areas
- *
- * Returns a profile object ready to be stored in the `cards` table.
- *
- * @param {string} resumeText - Raw resume text pasted by the candidate
- * @param {function} onProgress - Optional callback for progress messages
- * @returns {Promise<object>} Classified profile
- */
 export async function classifyResume(resumeText, onProgress = () => {}) {
   if (!resumeText?.trim()) {
     throw new Error('No resume text provided.')
   }
 
-  // Fetch live taxonomy from Supabase (cached within session)
   onProgress('Loading taxonomy...')
   const { knowledgeAreas, functionLevels, industries } = await fetchTaxonomy()
 
-  const prompt = 'Classify this resume:\n\n' + resumeText
+  onProgress('Parsing clean role data...')
+  const extracted = await callAPI(buildExtractSystem(), 'Parse this resume text:\n\n' + resumeText)
+  const processedRoles = normalizeExtractedRoles(extracted)
+  const rolePayload = buildRolePayload(processedRoles)
 
-  // Call 1 — shared dimensions
-  onProgress('Extracting your profile...')
-  const shared = await callAPI(buildSharedSystem(functionLevels, industries), prompt)
-  const totalMonths = Number(shared.total_months) || 0
-  const totalYears  = monthsToYears(totalMonths)
+  if (!rolePayload.roles.length) {
+    throw new Error('Could not parse roles from this resume. Please revise formatting and try again.')
+  }
 
-  // Call 2 — knowledge areas
+  const totalMonths = rolePayload.roles.reduce((sum, r) => sum + (Number(r.months) || 0), 0)
+  const totalYears = monthsToYears(totalMonths)
+  const rolePrompt = 'Classify this parsed resume role data:\n\n' + JSON.stringify(rolePayload, null, 2)
+
+  onProgress('Classifying functions and industries...')
+  const shared = await callAPI(buildSharedSystem(functionLevels, industries), rolePrompt)
+
   onProgress('Classifying knowledge areas...')
-  const kaResult = await callAPI(buildKnowledgeAreaSystem(knowledgeAreas, totalMonths), prompt)
+  const kaResult = await callAPI(buildKnowledgeAreaSystem(knowledgeAreas), rolePrompt)
 
-  // Convert months to display years
-  shared.industries    = convertMonthsToYears(shared.industries)
-  shared.functions     = convertMonthsToYears(shared.functions)
-  const knowledgeAreasResult = convertMonthsToYears(kaResult.knowledge_areas)
+  const functionNames = (functionLevels || []).map((f) => f.name)
+  const industryNames = (industries || []).map((i) => i.name)
+  const knowledgeAreaNames = (knowledgeAreas || []).map((k) => k.name)
 
-  // Return a profile shaped to match the `cards` table schema
+  const sharedAssignments = Array.isArray(shared?.role_assignments) ? shared.role_assignments : []
+  const kaAssignments = Array.isArray(kaResult?.role_assignments) ? kaResult.role_assignments : []
+
+  const functions = convertMonthsToYears(
+    aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'functions', functionNames)
+  )
+  const industriesOut = convertMonthsToYears(
+    aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'industries', industryNames)
+  )
+  const knowledgeAreasOut = convertMonthsToYears(
+    aggregateRoleAssignments(rolePayload.roles, kaAssignments, 'knowledge_areas', knowledgeAreaNames)
+  )
+
   return {
-    summary:         shared.summary   || '',
-    strengths:       shared.strengths || '',
-    total_years:     totalYears,
-    total_months:    totalMonths,
-    functions:       shared.functions      || [],
-    knowledge_areas: knowledgeAreasResult  || [],
-    industries:      shared.industries     || [],
-    tools:           shared.tools          || [],
-    credentials:     shared.credentials    || [],
-    framework:       'soc_minor',
+    summary: String(shared?.summary || ''),
+    strengths: String(shared?.strengths || ''),
+    total_years: totalYears,
+    total_months: totalMonths,
+    functions,
+    knowledge_areas: knowledgeAreasOut,
+    industries: industriesOut,
+    tools: Array.isArray(shared?.tools) ? shared.tools : [],
+    credentials: Array.isArray(shared?.credentials) ? shared.credentials : [],
+    framework: 'soc_minor',
   }
 }
