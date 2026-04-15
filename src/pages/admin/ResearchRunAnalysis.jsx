@@ -239,6 +239,24 @@ function SettingsPanel({ selectedModels, setSelectedModels, blind, setBlind, com
             />
             <span style={{ fontSize: 10, color: '#a09080' }}>Text inserted between multiple snippets.</span>
           </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#1a1410' }}>Number bonus</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
+              <input
+                type="range"
+                min="0"
+                max="30"
+                step="1"
+                value={componentKeys.evidenceNumberBonus ?? "10"}
+                onChange={(e) => setKey('evidenceNumberBonus', e.target.value)}
+                style={{ width: '100%' }}
+              />
+              <span style={{ minWidth: 26, textAlign: 'right', fontSize: 11, fontWeight: 700, color: '#1a1410' }}>
+                {Number(componentKeys.evidenceNumberBonus ?? 10)}
+              </span>
+            </div>
+            <span style={{ fontSize: 10, color: '#a09080' }}>Extra score when evidence contains a number (for example, 7+ investigations, 15% lift).</span>
+          </label>
         </div>
       </div>
 
@@ -292,9 +310,7 @@ function SettingsPanel({ selectedModels, setSelectedModels, blind, setBlind, com
                 }}>
 {`maxLength: ${profile.maxLength}
 lengthWeight: ${profile.lengthWeight}
-numberBonus: ${profile.numberBonus}
-quoteBonus: ${profile.quoteBonus}
-actionVerbBonus: ${profile.actionVerbBonus}`}
+numberBonus (default): ${profile.numberBonus}`}
                 </pre>
               )}
             </div>
@@ -554,6 +570,8 @@ export default function ResearchRunAnalysis() {
 
   const saveRunToSupabase = async (resumeId, parsedRoles, variantResults, components, variants) => {
     try {
+      const numberBonus = Number(componentKeys.evidenceNumberBonus)
+      const safeNumberBonus = Number.isFinite(numberBonus) ? numberBonus : Number(DEFAULT_SETTINGS.evidenceNumberBonus)
       const settings = {
         models: variants.map(v => ({ key: v.key, model_string: v.model, blind: v.blind })),
         blind,
@@ -565,6 +583,7 @@ export default function ResearchRunAnalysis() {
         evidence_quality_assessment_key: componentKeys.evidenceQualityAssessmentKey,
         evidence_max_snippets: Number(componentKeys.evidenceMaxSnippets) || 2,
         evidence_joiner: String(componentKeys.evidenceJoiner ?? " • "),
+        evidence_number_bonus: safeNumberBonus,
       }
 
       const { data: run, error: runErr } = await supabase
@@ -593,6 +612,7 @@ export default function ResearchRunAnalysis() {
             `Evidence display: ${componentKeys.evidenceDisplaySettingsKey}`,
             EVIDENCE_QUALITY_ASSESSMENTS.find(x => x.key === componentKeys.evidenceQualityAssessmentKey)?.name || componentKeys.evidenceQualityAssessmentKey,
             `max:${Number(componentKeys.evidenceMaxSnippets) || 2}`,
+            `numBonus:${safeNumberBonus}`,
           ].join(" | ")
           return {
             run_id:          run.id,
@@ -695,7 +715,8 @@ export default function ResearchRunAnalysis() {
           componentKeys.evidenceDisplaySettingsKey,
           componentKeys.evidenceQualityAssessmentKey,
           componentKeys.evidenceMaxSnippets,
-          componentKeys.evidenceJoiner
+          componentKeys.evidenceJoiner,
+          componentKeys.evidenceNumberBonus
         )
 
         allClassifications[key] = classifs

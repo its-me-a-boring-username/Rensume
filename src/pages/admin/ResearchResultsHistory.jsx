@@ -194,6 +194,7 @@ function RunHeader({ run, variantRows }) {
   const fnDefs = formatHeaderValue(variantRows, settings, "fn_defs_key", "fn_defs_key", FN_DEFS_NAME_MAP)
   const evidenceQualityAssessment = formatHeaderValue(variantRows, settings, "evidence_quality_assessment_key", "evidence_quality_assessment_key", EVIDENCE_QUALITY_ASSESSMENT_NAME_MAP)
   const evidenceMaxSnippets = Number(settings.evidence_max_snippets)
+  const evidenceNumberBonus = Number(settings.evidence_number_bonus)
   const evidenceJoiner = typeof settings.evidence_joiner === "string" ? settings.evidence_joiner : ""
 
   const blindFromRows = firstDefined(variantRows, "blind_mode")
@@ -208,6 +209,7 @@ function RunHeader({ run, variantRows }) {
     { label: "Evidence", value: evidence },
     { label: "Evidence Quality Assessment", value: evidenceQualityAssessment },
     { label: "Evidence Max Snippets", value: Number.isFinite(evidenceMaxSnippets) && evidenceMaxSnippets > 0 ? String(evidenceMaxSnippets) : "Not recorded" },
+    { label: "Evidence Number Bonus", value: Number.isFinite(evidenceNumberBonus) ? String(evidenceNumberBonus) : "Not recorded" },
     { label: "Evidence Joiner", value: evidenceJoiner || "Not recorded" },
     { label: "Function Level Definitions", value: fnDefs },
   ]

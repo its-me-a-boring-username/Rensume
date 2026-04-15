@@ -9,9 +9,10 @@
 
 export const VARIABLE_DEFINITIONS = {
   evidence_display_settings_key: "Controls fixed canonical evidence selection strategy (hidden from UI for now).",
-  evidence_quality_assessment_key: "Controls relevance scoring weights used when evidence display strategy is relevance-first.",
+  evidence_quality_assessment_key: "Controls baseline snippet-length scoring used when evidence display strategy is relevance-first.",
   evidence_max_snippets: "Controls the maximum number of canonical snippets included per function label.",
   evidence_joiner: "Controls the delimiter used to join canonical snippets into one display string.",
+  evidence_number_bonus: "Bonus score applied when an evidence snippet contains numbers.",
 }
 
 // â”€â”€â”€ Models â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -232,7 +233,18 @@ Strategic Manager - Manages multiple teams executing strategy-linked initiatives
 Strategic Executive - Decides what should happen. Binding authority
 Chief Executive - Accountable for organizational performance as a whole. Sets the vision and strategic direction`,
   },
-  placeholder(4),
+  {
+    key:         'fn_v4_manager_expanded',
+    name:        'v4 â€” Manager Expanded',
+    description: 'Manager-detail focused variant.',
+    content: `Processing Specialist - Executes clearly defined processes created by others. Work is primarily execution-focused within established SOPs and workflows
+Process Manager - Owns process design and process health for a scoped workflow. Converts policy into repeatable execution steps, defines decision points and handoffs, sets QA standards, and updates process design based on defects, risk signals, or throughput constraints
+People Manager - Manages people who execute defined processes. This includes guiding or directing the work of other employees, contractors, and BPOs (business process outsourcing partners) who may or may not be direct reports
+Strategic Advisor - Surfaces cross-functional problems through analysis, investigation, or research. Recommends policy/process changes but does not hold binding authority over implementation
+Strategic Manager - Leads managers and/or multiple teams delivering strategy-linked initiatives. Accountable for translating strategy into coordinated execution plans across teams, sequencing dependencies, setting operating priorities, and owning delivery outcomes within a defined scope
+Strategic Executive - Sets initiatives and determines priority within a defined scope. Has binding authority over outcomes, resources, or direction within a product, division, or organization
+Chief Executive - Accountable for organizational performance as a whole. Sets enterprise vision and strategic direction within which Strategic Executives operate`,
+  },
   placeholder(5),
   placeholder(6),
   placeholder(7),
@@ -276,32 +288,26 @@ export const EVIDENCE_QUALITY_ASSESSMENTS = [
   {
     key: "quality_v1_balanced",
     name: "Balanced",
-    description: "Balanced weighting across specificity and action signals.",
+    description: "Balanced length scoring profile.",
     maxLength: 220,
     lengthWeight: 1,
     numberBonus: 10,
-    quoteBonus: 4,
-    actionVerbBonus: 8,
   },
   {
     key: "quality_v2_relevance_heavy",
     name: "Relevance Heavy",
-    description: "Strongly rewards concrete and action-oriented evidence.",
+    description: "Higher length cap for fuller evidence lines.",
     maxLength: 260,
     lengthWeight: 1,
     numberBonus: 14,
-    quoteBonus: 6,
-    actionVerbBonus: 12,
   },
   {
     key: "quality_v3_light_touch",
     name: "Light Touch",
-    description: "Minimal scoring influence for softer ranking behavior.",
+    description: "Shorter length cap for conservative evidence selection.",
     maxLength: 180,
     lengthWeight: 1,
     numberBonus: 4,
-    quoteBonus: 2,
-    actionVerbBonus: 4,
   },
 ]
 
@@ -316,6 +322,7 @@ export const DEFAULT_SETTINGS = {
   evidenceQualityAssessmentKey: "quality_v1_balanced",
   evidenceMaxSnippets: "2",
   evidenceJoiner: " • ",
+  evidenceNumberBonus: "10",
 }
 
 export function getEvidenceDisplaySettingsByKey(key) {
@@ -498,18 +505,20 @@ export function aggregateLabels(
   evidenceDisplaySettingsKey = DEFAULT_SETTINGS.evidenceDisplaySettingsKey,
   evidenceQualityAssessmentKey = DEFAULT_SETTINGS.evidenceQualityAssessmentKey,
   evidenceMaxSnippets = DEFAULT_SETTINGS.evidenceMaxSnippets,
-  evidenceJoiner = DEFAULT_SETTINGS.evidenceJoiner
+  evidenceJoiner = DEFAULT_SETTINGS.evidenceJoiner,
+  evidenceNumberBonus = DEFAULT_SETTINGS.evidenceNumberBonus
 ) {
   const preset = getEvidenceDisplaySettingsByKey(evidenceDisplaySettingsKey)
   const quality = getEvidenceQualityAssessmentByKey(evidenceQualityAssessmentKey)
+  const parsedNumberBonus = Number(evidenceNumberBonus)
+  const effectiveNumberBonus = Number.isFinite(parsedNumberBonus)
+    ? parsedNumberBonus
+    : Number(quality.numberBonus) || 0
+
   const scoreEvidence = (text) => {
     const source = String(text || "")
     let s = Math.min(source.length, Number(quality.maxLength) || 220) * (Number(quality.lengthWeight) || 1)
-    if (/\d/.test(source)) s += Number(quality.numberBonus) || 0
-    if (/['"]/.test(source)) s += Number(quality.quoteBonus) || 0
-    if (/\b(led|managed|built|designed|owned|drove|launched|reduced|improved|increased|defined|directed)\b/i.test(source)) {
-      s += Number(quality.actionVerbBonus) || 0
-    }
+    if (/\d/.test(source)) s += effectiveNumberBonus
     return s
   }
   const pickEvidence = (items) => {
