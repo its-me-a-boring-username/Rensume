@@ -20,7 +20,7 @@ export const AVAILABLE_MODELS = [
   { key: 'opus_4_6',   label: 'Opus 4.6',   model: 'claude-opus-4-6',            price: '$5 / $25 per MTok'     },
   { key: 'opus_4_5',   label: 'Opus 4.5',   model: 'claude-opus-4-5',            price: '$5 / $25 per MTok'     },
   { key: 'sonnet_4_6', label: 'Sonnet 4.6', model: 'claude-sonnet-4-6',          price: '$3 / $15 per MTok'     },
-  { key: 'sonnet_4_5', label: 'Sonnet 4.5', model: 'claude-sonnet-4-5-20251001', price: '$3 / $15 per MTok'     },
+  { key: 'sonnet_4_5', label: 'Sonnet 4.5', model: 'claude-sonnet-4-5-20250929', price: '$3 / $15 per MTok'     },
   { key: 'haiku_4_5',  label: 'Haiku 4.5',  model: 'claude-haiku-4-5-20251001',  price: '$1 / $5 per MTok'      },
   { key: 'haiku_3_5',  label: 'Haiku 3.5',  model: 'claude-haiku-3-5-20241022',  price: '$0.80 / $4 per MTok'   },
   { key: 'haiku_3',    label: 'Haiku 3',    model: 'claude-haiku-3-20240307',    price: '$0.25 / $1.25 per MTok'},
