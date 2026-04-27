@@ -62,10 +62,10 @@ const STYLES = `
 `
 
 const STEPS = [
-  { msg: 'Loading taxonomy...',           label: 'Loading taxonomy'           },
-  { msg: 'Extracting your profile...',    label: 'Extracting profile'         },
-  { msg: 'Classifying knowledge areas...', label: 'Classifying knowledge areas' },
-  { msg: '__done__',                      label: 'Building your card'         },
+  { msg: 'Loading taxonomy...',            label: 'Identifying function levels'  },
+  { msg: 'Extracting your profile...',     label: 'Classifying knowledge areas'  },
+  { msg: 'Classifying knowledge areas...', label: 'Adding tools'                 },
+  { msg: '__done__',                       label: 'Reviewing credentials'        },
 ]
 
 function stepStatus(steps, currentMsg) {
@@ -114,11 +114,11 @@ function LoadingPanel({ loadingMsg }) {
         <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '.14em', color: '#904060', marginBottom: 6 }}>RENSUME · TAXONOMY PROFILE</div>
         <div style={{ fontSize: 13, fontWeight: 700, color: '#faf8f4' }}>Classifying your resume</div>
       </div>
-      <div style={{ padding: '18px 18px' }}>
+      <div style={{ padding: '24px 18px' }}>
         {STEPS.map((step, i) => {
           const status = statuses[i]
           return (
-            <div key={step.msg} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: i < STEPS.length - 1 ? '0.5px solid #242830' : 'none' }}>
+            <div key={step.msg} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 0', borderBottom: i < STEPS.length - 1 ? '0.5px solid #242830' : 'none' }}>
               <div style={{
                 width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
                 background: status === 'done' ? '#904060' : status === 'active' ? '#c87090' : 'transparent',
