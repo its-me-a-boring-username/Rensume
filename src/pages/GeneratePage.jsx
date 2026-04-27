@@ -63,7 +63,8 @@ const STYLES = `
 
 const MESSAGES = [
   'Loading taxonomy...',
-  'Extracting your profile...',
+  'Parsing clean role data...',
+  'Classifying functions and industries...',
   'Classifying knowledge areas...',
 ]
 
@@ -71,16 +72,16 @@ const STEPS = [
   { phase: 0, label: 'Extracting profile'          },
   { phase: 0, label: 'Loading taxonomy'            },
   { phase: 1, label: 'Identifying function levels' },
-  { phase: 1, label: 'Classifying knowledge areas' },
+  { phase: 2, label: 'Classifying knowledge areas' },
   { phase: 2, label: 'Adding tools'                },
-  { phase: 2, label: 'Reviewing credentials'       },
-  { phase: 3, label: 'Building your card'          },
+  { phase: 3, label: 'Reviewing credentials'       },
+  { phase: 4, label: 'Building your card'          },
 ]
 
 function stepStatus(currentMsg) {
   if (!currentMsg) return STEPS.map(() => 'pending')
   const msgIdx = MESSAGES.indexOf(currentMsg)
-  const phase = msgIdx === -1 ? 3 : msgIdx
+  const phase = msgIdx === -1 ? MESSAGES.length : msgIdx
   let foundActive = false
   return STEPS.map(step => {
     if (step.phase < phase) return 'done'
