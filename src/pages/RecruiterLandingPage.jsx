@@ -9,7 +9,7 @@ export default function RecruiterLandingPage() {
 
         .nav { background: #1a1e24; border-bottom: 0.5px solid #2c3038; }
         .nav .inner { padding: 12px 48px; display: flex; align-items: center; justify-content: space-between; }
-        .logo { font-size: 13px; font-weight: 700; letter-spacing: .12em; color: #904060; }
+        .logo { font-size: 13px; font-weight: 700; letter-spacing: .12em; color: #904060; text-decoration: none; }
         .cta { font-size: 11px; font-weight: 700; color: #faf8f4; background: #904060; padding: 5px 14px; border-radius: 3px; text-decoration: none; }
         .cta:hover { background: #7a3452; }
 
@@ -107,7 +107,7 @@ export default function RecruiterLandingPage() {
       {/* Nav */}
       <div className="nav">
         <div className="inner">
-          <span className="logo">RENSUME</span>
+          <a href="/" className="logo">RENSUME</a>
           <a href="https://rensume.com/generate" className="cta">Generate a card</a>
         </div>
       </div>
@@ -237,7 +237,7 @@ export default function RecruiterLandingPage() {
       {/* Footer */}
       <div className="footer">
         <div className="inner">
-          <span className="footer-logo">RENSUME</span>
+          <a href="/" className="footer-logo" style={{ textDecoration: 'none' }}>RENSUME</a>
           <span className="footer-copy">© 2025 Rensume</span>
         </div>
       </div>
