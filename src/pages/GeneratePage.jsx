@@ -61,21 +61,32 @@ const STYLES = `
   }
 `
 
-const STEPS = [
-  { msg: 'Loading taxonomy...',            label: 'Identifying function levels'  },
-  { msg: 'Extracting your profile...',     label: 'Classifying knowledge areas'  },
-  { msg: 'Classifying knowledge areas...', label: 'Adding tools'                 },
-  { msg: '__done__',                       label: 'Reviewing credentials'        },
+const MESSAGES = [
+  'Loading taxonomy...',
+  'Extracting your profile...',
+  'Classifying knowledge areas...',
 ]
 
-function stepStatus(steps, currentMsg) {
-  if (!currentMsg) return steps.map(() => 'pending')
-  const active = steps.findIndex(s => s.msg === currentMsg)
-  if (active === -1) {
-    // message not recognised — treat all as done (finishing up)
-    return steps.map((_, i) => i < steps.length - 1 ? 'done' : 'active')
-  }
-  return steps.map((_, i) => i < active ? 'done' : i === active ? 'active' : 'pending')
+const STEPS = [
+  { phase: 0, label: 'Extracting profile'          },
+  { phase: 0, label: 'Loading taxonomy'            },
+  { phase: 1, label: 'Identifying function levels' },
+  { phase: 1, label: 'Classifying knowledge areas' },
+  { phase: 2, label: 'Adding tools'                },
+  { phase: 2, label: 'Reviewing credentials'       },
+  { phase: 3, label: 'Building your card'          },
+]
+
+function stepStatus(currentMsg) {
+  if (!currentMsg) return STEPS.map(() => 'pending')
+  const msgIdx = MESSAGES.indexOf(currentMsg)
+  const phase = msgIdx === -1 ? 3 : msgIdx
+  let foundActive = false
+  return STEPS.map(step => {
+    if (step.phase < phase) return 'done'
+    if (step.phase === phase && !foundActive) { foundActive = true; return 'active' }
+    return 'pending'
+  })
 }
 
 function InjectStyles() {
@@ -104,7 +115,7 @@ function Nav({ showBack, onBack }) {
 }
 
 function LoadingPanel({ loadingMsg }) {
-  const statuses = stepStatus(STEPS, loadingMsg)
+  const statuses = stepStatus(loadingMsg)
   const doneCount = statuses.filter(s => s === 'done').length
   const progress = Math.round((doneCount / STEPS.length) * 100)
 
