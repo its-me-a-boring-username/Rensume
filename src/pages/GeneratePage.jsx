@@ -93,7 +93,7 @@ function InjectStyles() {
 function Nav({ showBack, onBack }) {
   return (
     <div style={{ background: '#1a1e24', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '0.5px solid #2c3038' }}>
-      <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.12em', color: '#904060' }}>RENSUME</span>
+      <a href="/" style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.12em', color: '#904060', textDecoration: 'none' }}>RENSUME</a>
       {showBack && (
         <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#909aa8', fontSize: 11, cursor: 'pointer', padding: '4px 0' }}>
           ← Edit resume
