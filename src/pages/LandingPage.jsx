@@ -8,11 +8,11 @@ export default function LandingPage() {
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, Arial, sans-serif; background: #faf8f4; }
-        .nav { background: #2c3038; padding: 12px 48px; display: flex; align-items: center; justify-content: space-between; border-bottom: 0.5px solid #404850; }
+        .nav { background: #2c3038; padding: 12px 100px; display: flex; align-items: center; justify-content: space-between; border-bottom: 0.5px solid #404850; }
         .logo { font-size: 13px; font-weight: 700; letter-spacing: .12em; color: #904060; }
         .cta { font-size: 11px; font-weight: 700; color: #faf8f4; background: #904060; padding: 5px 14px; border-radius: 3px; text-decoration: none; cursor: pointer; border: none; }
         .cta:hover { background: #7a3452; }
-        .hero { padding: 48px 80px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; background: #faf8f4; border-bottom: 0.5px solid #d8d0c4; }
+        .hero { padding: 48px 100px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; background: #faf8f4; border-bottom: 0.5px solid #d8d0c4; }
         .eyebrow { font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #904060; margin-bottom: 12px; }
         .hero h1 { font-size: 28px; font-weight: 700; color: #1a1410; line-height: 1.3; margin-bottom: 14px; }
         .hero p { font-size: 12px; color: #706050; line-height: 1.8; margin-bottom: 22px; }
@@ -34,7 +34,7 @@ export default function LandingPage() {
         .cfoot { padding: 7px 16px; border-top: 0.5px solid #d8d0c8; display: flex; justify-content: space-between; }
         .cfoot span { font-size: 7.5px; color: #b0a898; }
         .cfoot .brand { font-weight: 700; color: #682848; letter-spacing: .08em; }
-        .how { padding: 56px 80px; background: #faf8f4; border-bottom: 0.5px solid #d8d0c4; }
+        .how { padding: 56px 100px; background: #faf8f4; border-bottom: 0.5px solid #d8d0c4; }
         .section-eyebrow { font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #904060; margin-bottom: 8px; }
         .section-title { font-size: 22px; font-weight: 700; color: #1a1410; margin-bottom: 36px; }
         .steps { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 32px; }
@@ -42,7 +42,7 @@ export default function LandingPage() {
         .step-divider { width: 24px; height: 2px; background: #904060; margin-bottom: 12px; }
         .step-title { font-size: 14px; font-weight: 700; color: #1a1410; margin-bottom: 8px; }
         .step-body { font-size: 11.5px; color: #706050; line-height: 1.75; }
-        .taxonomy { padding: 56px 80px; background: #2c3038; border-bottom: 0.5px solid #404850; }
+        .taxonomy { padding: 56px 100px; background: #2c3038; border-bottom: 0.5px solid #404850; }
         .taxonomy .section-eyebrow { color: #904060; }
         .taxonomy .section-title { color: #faf8f4; margin-bottom: 12px; }
         .taxonomy .section-intro { font-size: 12px; color: #909aa8; line-height: 1.8; margin-bottom: 36px; max-width: 560px; }
@@ -51,7 +51,7 @@ export default function LandingPage() {
         .dim-label { font-size: 7.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #904060; margin-bottom: 6px; }
         .dim-title { font-size: 14px; font-weight: 700; color: #faf8f4; margin-bottom: 8px; }
         .dim-body { font-size: 11px; color: #808898; line-height: 1.7; }
-        .recruiter { padding: 56px 80px; background: #f0ece4; border-bottom: 0.5px solid #d8d0c4; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+        .recruiter { padding: 56px 100px; background: #f0ece4; border-bottom: 0.5px solid #d8d0c4; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
         .recruiter .section-eyebrow { color: #904060; }
         .recruiter h2 { font-size: 22px; font-weight: 700; color: #1a1410; margin-bottom: 14px; line-height: 1.35; }
         .recruiter p { font-size: 12px; color: #706050; line-height: 1.8; margin-bottom: 24px; }
@@ -60,7 +60,7 @@ export default function LandingPage() {
         .rf-dot { width: 6px; height: 6px; border-radius: 50%; background: #904060; margin-top: 5px; flex-shrink: 0; }
         .rf-title { font-size: 12px; font-weight: 700; color: #1a1410; margin-bottom: 3px; }
         .rf-body { font-size: 11px; color: #706050; line-height: 1.6; }
-        .data { padding: 48px 80px; background: #faf8f4; border-bottom: 0.5px solid #d8d0c4; text-align: center; }
+        .data { padding: 48px 100px; background: #faf8f4; border-bottom: 0.5px solid #d8d0c4; text-align: center; }
         .data-title { font-size: 18px; font-weight: 700; color: #1a1410; margin-bottom: 6px; }
         .data-sub { font-size: 12px; color: #706050; margin-bottom: 32px; }
         .data-points { display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; }
@@ -68,7 +68,7 @@ export default function LandingPage() {
         .dp-accent { width: 16px; height: 2px; background: #904060; margin-bottom: 8px; }
         .dp-title { font-size: 12px; font-weight: 700; color: #1a1410; margin-bottom: 5px; }
         .dp-body { font-size: 11px; color: #a09080; line-height: 1.65; }
-        .footer { background: #2c3038; padding: 24px 80px; display: flex; align-items: center; justify-content: space-between; }
+        .footer { background: #2c3038; padding: 24px 100px; display: flex; align-items: center; justify-content: space-between; }
         .footer-logo { font-size: 12px; font-weight: 700; letter-spacing: .12em; color: #904060; }
         .footer-copy { font-size: 10px; color: #404850; }
         @media (max-width: 700px) {
