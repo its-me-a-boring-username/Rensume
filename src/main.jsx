@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase.js'
 import LandingPage from './pages/LandingPage'
+import RecruiterLandingPage from './pages/RecruiterLandingPage'
 import GeneratePage from './pages/GeneratePage'
 import ResearchLogin from './components/ResearchLogin.jsx'
 import ResearchNav from './components/ResearchNav.jsx'
@@ -99,7 +100,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <Routes>
         {/* Public */}
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<RecruiterLandingPage />} />
+        <Route path="/candidate" element={<LandingPage />} />
         <Route path="/generate" element={<GeneratePage />} />
 
         {/* Admin — auth required */}
