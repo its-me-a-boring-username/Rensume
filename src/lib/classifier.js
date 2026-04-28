@@ -4,7 +4,7 @@
 
 import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels } from './taxonomy.js'
 
-const MAX_EVIDENCE_LINES_PER_LABEL = 3
+const MAX_EVIDENCE_LINES_PER_LABEL = 2
 const MAX_EVIDENCE_CHARS           = 125
 const MAX_INDUSTRIES_RETURNED      = 3
 const MAX_KNOWLEDGE_AREAS_RETURNED = 6
@@ -15,10 +15,10 @@ const PEOPLE_MANAGER_DEFINITION =
 // --- Prompts ---------------------------------------------------------------
 
 function buildExtractSystem() {
-  return `You are a resume parser for Rensume. Extract every professional role and return ONLY valid JSON.
+  return `You are a resume parser for Rensume. Extract every professional role and any explicitly listed tools, then return ONLY valid JSON.
 
 Return this exact structure:
-{"roles":[{"title":"","employer":"","start_raw":"","end_raw":"","text":""}]}
+{"roles":[{"title":"","employer":"","start_raw":"","end_raw":"","text":""}],"tools":["tool name"]}
 
 Rules:
 - Copy start_raw and end_raw exactly as written in the resume.
@@ -26,6 +26,8 @@ Rules:
 - Include all role text and bullet points in "text".
 - If end date is missing but role appears current, set end_raw to "Present".
 - If a field is unknown, use an empty string.
+- For tools: extract ONLY items explicitly listed in a dedicated Tools, Skills, or Software section. Do NOT infer tools or methods from role descriptions.
+- If no tools section exists, return an empty tools array.
 - No markdown, no backticks, no commentary.`
 }
 
@@ -54,7 +56,6 @@ Respond ONLY with this exact JSON structure:
 {
   "summary": "one plain sentence, max 160 chars",
   "strengths": "1-2 sentences highlighting differentiators",
-  "tools": ["tool or method name"],
   "credentials": [{"type": "Degree|Certification|License", "name": "", "institution": "", "year": ""}],
   "role_assignments": [
     {
@@ -375,6 +376,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   }
 
   const processedRoles = normalizeExtractedRoles(extracted)
+  const extractedTools = Array.isArray(extracted?.tools) ? extracted.tools.filter(Boolean) : []
   const rolePayload = buildRolePayload(processedRoles)
 
   if (!rolePayload.roles.length) {
@@ -422,7 +424,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
     functions,
     knowledge_areas: capTopLabels(knowledgeAreasOut, MAX_KNOWLEDGE_AREAS_RETURNED),
     industries:      capTopLabels(industriesOut,     MAX_INDUSTRIES_RETURNED),
-    tools:           Array.isArray(shared?.tools)       ? shared.tools       : [],
+    tools:           extractedTools,
     credentials:     Array.isArray(shared?.credentials) ? shared.credentials : [],
     framework:       'soc_minor',
   }
