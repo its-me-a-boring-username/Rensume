@@ -385,14 +385,14 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
       return SP.barH + SP.barToEvidence + wrapped.length * SP.evidenceLH + SP.evidenceToNext
     }
 
-    const leftSpace   = FOOT_Y - 2 - left.getY()
+    const leftSpace   = FOOT_Y - 4 - left.getY()
     const kaLeft  = []
     const kaRight = []
     let usedH = SP.sectionToFirst + 6  // section heading height
     let overflowed = false
 
     for (const ka of knowledge_areas) {
-      const h = kaItemHeight(ka) * 0.85  // discount — measurement tends to overestimate; recalibrated for longer evidence strings
+      const h = kaItemHeight(ka) * 0.92  // slight discount — measurement tends to overestimate
       if (!overflowed && usedH + h <= leftSpace) {
         kaLeft.push(ka); usedH += h
       } else {
