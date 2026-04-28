@@ -5,7 +5,7 @@
 import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels } from './taxonomy.js'
 
 const MAX_EVIDENCE_LINES_PER_LABEL = 4
-const MAX_EVIDENCE_CHARS           = 150
+const MAX_EVIDENCE_CHARS           = 125
 const MAX_INDUSTRIES_RETURNED      = 3
 const MAX_KNOWLEDGE_AREAS_RETURNED = 6
 
@@ -41,7 +41,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - For each role_index, assign zero or more function labels and zero or more industry labels.
 - Function levels are independent. Do not infer a higher level by combining two lower-level signals.
 - Use exact label names from the provided lists.
-- Evidence must be a direct quote or close paraphrase from the role text. Maximum 150 characters per evidence string.
+- Evidence must be a direct quote or close paraphrase from the role text. Maximum 125 characters per evidence string.
 - Use single quotes inside evidence strings.
 
 Function levels list:
@@ -77,7 +77,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Use only the provided parsed role data.
 - For each role_index, assign zero or more knowledge area labels.
 - Use exact names from the provided list.
-- Evidence must be a direct quote or close paraphrase from role text. Maximum 150 characters per evidence string.
+- Evidence must be a direct quote or close paraphrase from role text. Maximum 125 characters per evidence string.
 - Keep coverage broad but precise; avoid collapsing distinct domains.
 
 Allowed knowledge area names (exact):
