@@ -4,7 +4,7 @@
 
 import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels } from './taxonomy.js'
 
-const MAX_EVIDENCE_LINES_PER_LABEL = 2
+const MAX_EVIDENCE_LINES_PER_LABEL = 4
 const MAX_EVIDENCE_CHARS           = 150
 const MAX_INDUSTRIES_RETURNED      = 3
 const MAX_KNOWLEDGE_AREAS_RETURNED = 6
