@@ -4,8 +4,8 @@
 
 import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels } from './taxonomy.js'
 
-const MAX_EVIDENCE_LINES_PER_LABEL   = 3
-const MAX_EVIDENCE_CHARS             = 100
+const MAX_EVIDENCE_LINES_PER_LABEL   = 1
+const MAX_EVIDENCE_CHARS             = 160
 const MAX_INDUSTRY_EVIDENCE_LINES    = 1
 const MAX_INDUSTRY_EVIDENCE_CHARS    = 80
 const MAX_INDUSTRIES_RETURNED        = 3
@@ -47,8 +47,8 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Function levels are independent. Do not infer a higher level by combining two lower-level signals.
 - Do not assign Strategic Manager unless the role text contains explicit evidence of managing people or teams. Broad scope of responsibility alone is not sufficient.
 - Use exact label names from the provided lists.
-- Evidence must be grounded in the role text and self-contained for a reader who has not seen the resume. You may replace vague internal references (e.g. 'this workflow', 'this project') with their specific referent from the same role text. Do not infer capabilities, skills, or outcomes not explicitly stated. Hard limit: 100 characters. Do not exceed this under any circumstances.
-- For industry evidence: name the employer and briefly describe the relevant sector or type of work (e.g. 'cryptocurrency exchange Coinbase', 'GenAI annotation at Meta'). Maximum 80 characters.
+- Evidence must be a single synthesized sentence grounded in the role text, self-contained for a reader who has not seen the resume. Combine the most relevant activities into one readable sentence. You may replace vague internal references (e.g. 'this workflow') with their specific referent from the same role text. Do not infer capabilities, skills, or outcomes not explicitly stated. Hard limit: 160 characters.
+- For industry evidence: describe the employer's business sector only. Do not reference specific roles, programs, or projects. Name the employer (e.g. 'cryptocurrency exchange Coinbase', 'banking provider Simple Finance'). Maximum 80 characters.
 - Use single quotes inside evidence strings.
 
 Function levels list:
@@ -59,7 +59,7 @@ ${formatIndustryList(industries)}
 
 Respond ONLY with this exact JSON structure:
 {
-  "summary": "one plain sentence, max 160 chars",
+  "summary": "one plain sentence, max 175 chars",
   "strengths": "1-2 sentences highlighting differentiators",
   "role_assignments": [
     {
@@ -82,7 +82,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Use only the provided parsed role data.
 - For each role_index, assign zero or more knowledge area labels.
 - Use exact names from the provided list.
-- Evidence must be grounded in the role text and self-contained for a reader who has not seen the resume. You may replace vague internal references (e.g. 'this workflow', 'this project') with their specific referent from the same role text. Do not infer capabilities, skills, or outcomes not explicitly stated. Maximum 100 characters per evidence string.
+- Evidence must be a single synthesized sentence grounded in the role text, self-contained for a reader who has not seen the resume. Combine the most relevant activities into one readable sentence. You may replace vague internal references with their specific referent from the same role text. Do not infer capabilities, skills, or outcomes not explicitly stated. Maximum 160 characters.
 - Keep coverage broad but precise; avoid collapsing distinct domains.
 
 Allowed knowledge area names (exact):
