@@ -4,11 +4,12 @@
 
 import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels } from './taxonomy.js'
 
-const MAX_EVIDENCE_LINES_PER_LABEL = 3
-const MAX_EVIDENCE_CHARS           = 100
-const MAX_INDUSTRY_EVIDENCE_CHARS  = 50
-const MAX_INDUSTRIES_RETURNED      = 3
-const MAX_KNOWLEDGE_AREAS_RETURNED = 6
+const MAX_EVIDENCE_LINES_PER_LABEL   = 3
+const MAX_EVIDENCE_CHARS             = 100
+const MAX_INDUSTRY_EVIDENCE_LINES    = 1
+const MAX_INDUSTRY_EVIDENCE_CHARS    = 80
+const MAX_INDUSTRIES_RETURNED        = 3
+const MAX_KNOWLEDGE_AREAS_RETURNED   = 6
 
 const PEOPLE_MANAGER_DEFINITION =
   'Manages people who execute defined processes. This includes guiding or directing the work of other employees, contractors, and BPOs (business process outsourcing partners) who may or may not be direct reports'
@@ -46,7 +47,8 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Function levels are independent. Do not infer a higher level by combining two lower-level signals.
 - Do not assign Strategic Manager unless the role text contains explicit evidence of managing people or teams. Broad scope of responsibility alone is not sufficient.
 - Use exact label names from the provided lists.
-- Evidence must be a direct quote or close paraphrase from the role text. Maximum 100 characters per evidence string.
+- Evidence must be a direct or partial quote from the role text. Do not paraphrase or infer. Hard limit: 100 characters. Do not exceed this under any circumstances.
+- For industry evidence: one sentence quoting or partially quoting relevant context. Maximum 80 characters.
 - Use single quotes inside evidence strings.
 
 Function levels list:
@@ -80,7 +82,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Use only the provided parsed role data.
 - For each role_index, assign zero or more knowledge area labels.
 - Use exact names from the provided list.
-- Evidence must be a direct quote or close paraphrase from role text. Maximum 100 characters per evidence string.
+- Evidence must be a direct or partial quote from the role text. Do not paraphrase or infer. Maximum 100 characters per evidence string.
 - Keep coverage broad but precise; avoid collapsing distinct domains.
 
 Allowed knowledge area names (exact):
@@ -236,10 +238,13 @@ function buildCanonicalNameMap(names) {
 
 function truncateEvidence(str, maxChars = MAX_EVIDENCE_CHARS) {
   const t = String(str || '').trim()
-  return t.length > maxChars ? t.slice(0, maxChars - 3) + '...' : t
+  if (t.length <= maxChars) return t
+  const cut = t.slice(0, maxChars - 1)
+  const lastSpace = cut.lastIndexOf(' ')
+  return (lastSpace > maxChars * 0.5 ? cut.slice(0, lastSpace) : cut).replace(/[,;:]$/, '') + '…'
 }
 
-function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames, maxChars = MAX_EVIDENCE_CHARS) {
+function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames, maxChars = MAX_EVIDENCE_CHARS, maxLines = MAX_EVIDENCE_LINES_PER_LABEL) {
   const canonical = buildCanonicalNameMap(allowedNames)
   const byName = new Map()
   const monthsAdded = new Set()
@@ -292,7 +297,7 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
       if (seen.has(k)) continue
       seen.add(k)
       picked.push(t)
-      if (picked.length >= MAX_EVIDENCE_LINES_PER_LABEL) break
+      if (picked.length >= maxLines) break
     }
     return picked.join(' • ')
   }
@@ -416,7 +421,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   const kaAssignments     = Array.isArray(kaResult?.role_assignments) ? kaResult.role_assignments : []
 
   const functions       = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'functions',       functionNames))
-  const industriesOut   = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'industries',      industryNames, MAX_INDUSTRY_EVIDENCE_CHARS))
+  const industriesOut   = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'industries',      industryNames, MAX_INDUSTRY_EVIDENCE_CHARS, MAX_INDUSTRY_EVIDENCE_LINES))
   const knowledgeAreasOut = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, kaAssignments,   'knowledge_areas', knowledgeAreaNames))
 
   return {
