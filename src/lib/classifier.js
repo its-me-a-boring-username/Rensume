@@ -6,28 +6,30 @@ import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels }
 
 const MAX_EVIDENCE_LINES_PER_LABEL = 3
 const MAX_EVIDENCE_CHARS           = 100
+const MAX_INDUSTRY_EVIDENCE_CHARS  = 50
 const MAX_INDUSTRIES_RETURNED      = 3
 const MAX_KNOWLEDGE_AREAS_RETURNED = 6
 
 const PEOPLE_MANAGER_DEFINITION =
   'Manages people who execute defined processes. This includes guiding or directing the work of other employees, contractors, and BPOs (business process outsourcing partners) who may or may not be direct reports'
 
+
 // --- Prompts ---------------------------------------------------------------
 
 function buildExtractSystem() {
-  return `You are a resume parser for Rensume. Extract every professional role and any explicitly listed tools, then return ONLY valid JSON.
+  return `You are a resume parser for Rensume. Extract roles, tools, and credentials, then return ONLY valid JSON.
 
 Return this exact structure:
-{"roles":[{"title":"","employer":"","start_raw":"","end_raw":"","text":""}],"tools":["tool name"]}
+{
+  "roles": [{"title":"","employer":"","start_raw":"","end_raw":"","text":""}],
+  "tools": ["tool name"],
+  "credentials": [{"type":"Degree|Certification|License","name":"","institution":"","year":""}]
+}
 
 Rules:
-- Copy start_raw and end_raw exactly as written in the resume.
-- Keep each role separate. Do not merge roles from the same employer.
-- Include all role text and bullet points in "text".
-- If end date is missing but role appears current, set end_raw to "Present".
-- If a field is unknown, use an empty string.
-- For tools: extract ONLY items explicitly listed in a dedicated Tools, Skills, or Software section. Do NOT infer tools or methods from role descriptions.
-- If no tools section exists, return an empty tools array.
+- roles: extract every professional role. Copy start_raw and end_raw exactly as written. Keep each role separate. Include all bullet points in "text". If end date is missing but role appears current, set end_raw to "Present".
+- tools: extract ONLY items explicitly listed in a dedicated Tools, Skills, or Software section. Do NOT infer tools or methods from role descriptions. If no tools section exists, return [].
+- credentials: extract degrees, certifications, and licenses from Education or Credentials sections only. Do not infer from role descriptions.
 - No markdown, no backticks, no commentary.`
 }
 
@@ -56,7 +58,6 @@ Respond ONLY with this exact JSON structure:
 {
   "summary": "one plain sentence, max 160 chars",
   "strengths": "1-2 sentences highlighting differentiators",
-  "credentials": [{"type": "Degree|Certification|License", "name": "", "institution": "", "year": ""}],
   "role_assignments": [
     {
       "role_index": 0,
@@ -232,12 +233,12 @@ function buildCanonicalNameMap(names) {
   return map
 }
 
-function truncateEvidence(str) {
+function truncateEvidence(str, maxChars = MAX_EVIDENCE_CHARS) {
   const t = String(str || '').trim()
-  return t.length > MAX_EVIDENCE_CHARS ? t.slice(0, MAX_EVIDENCE_CHARS - 3) + '...' : t
+  return t.length > maxChars ? t.slice(0, maxChars - 3) + '...' : t
 }
 
-function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames) {
+function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames, maxChars = MAX_EVIDENCE_CHARS) {
   const canonical = buildCanonicalNameMap(allowedNames)
   const byName = new Map()
   const monthsAdded = new Set()
@@ -284,7 +285,7 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
     const seen = new Set()
     const picked = []
     for (const row of rows || []) {
-      const t = truncateEvidence(row?.evidence)
+      const t = truncateEvidence(row?.evidence, maxChars)
       if (!t) continue
       const k = t.toLowerCase()
       if (seen.has(k)) continue
@@ -358,7 +359,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   onProgress('Loading taxonomy...')
   const { knowledgeAreas, functionLevels, industries } = await fetchTaxonomy()
 
-  // Patch People Manager definition to include BPO / non-direct-report language
+  // Patch function level definitions
   const patchedFunctionLevels = functionLevels.map(fl =>
     fl.name === 'People Manager' ? { ...fl, definition: PEOPLE_MANAGER_DEFINITION } : fl
   )
@@ -376,7 +377,8 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   }
 
   const processedRoles = normalizeExtractedRoles(extracted)
-  const extractedTools = Array.isArray(extracted?.tools) ? extracted.tools.filter(Boolean) : []
+  const extractedTools       = Array.isArray(extracted?.tools)       ? extracted.tools.filter(Boolean)       : []
+  const extractedCredentials = Array.isArray(extracted?.credentials) ? extracted.credentials.filter(Boolean) : []
   const rolePayload = buildRolePayload(processedRoles)
 
   if (!rolePayload.roles.length) {
@@ -413,7 +415,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   const kaAssignments     = Array.isArray(kaResult?.role_assignments) ? kaResult.role_assignments : []
 
   const functions       = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'functions',       functionNames))
-  const industriesOut   = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'industries',      industryNames))
+  const industriesOut   = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'industries',      industryNames, MAX_INDUSTRY_EVIDENCE_CHARS))
   const knowledgeAreasOut = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, kaAssignments,   'knowledge_areas', knowledgeAreaNames))
 
   return {
@@ -425,7 +427,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
     knowledge_areas: capTopLabels(knowledgeAreasOut, MAX_KNOWLEDGE_AREAS_RETURNED),
     industries:      capTopLabels(industriesOut,     MAX_INDUSTRIES_RETURNED),
     tools:           extractedTools,
-    credentials:     Array.isArray(shared?.credentials) ? shared.credentials : [],
+    credentials:     extractedCredentials,
     framework:       'soc_minor',
   }
 }
