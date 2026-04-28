@@ -44,6 +44,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Use only the provided parsed role data.
 - For each role_index, assign zero or more function labels and zero or more industry labels.
 - Function levels are independent. Do not infer a higher level by combining two lower-level signals.
+- Do not assign Strategic Manager unless the role text contains explicit evidence of managing people or teams. Broad scope of responsibility alone is not sufficient.
 - Use exact label names from the provided lists.
 - Evidence must be a direct quote or close paraphrase from the role text. Maximum 100 characters per evidence string.
 - Use single quotes inside evidence strings.
