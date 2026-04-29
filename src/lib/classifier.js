@@ -302,6 +302,10 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
     }
     if (!candidates.length) return ''
 
+    candidates.sort((a, b) =>
+      (roles[b.role_index]?.months || 0) - (roles[a.role_index]?.months || 0)
+    )
+
     const selected = []
     const usedRoles = new Set()
     for (const row of candidates) {
