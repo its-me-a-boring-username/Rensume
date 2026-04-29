@@ -36,8 +36,6 @@ function TaxonomyRow({ label, years, pillStyle, deleteMode, deleted, onToggleDel
       justifyContent: 'space-between',
       padding: '7px 0',
       borderBottom: '0.5px solid #ede8e2',
-      opacity: deleted ? 0.4 : 1,
-      transition: 'opacity 0.15s',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {deleteMode && (
@@ -56,11 +54,13 @@ function TaxonomyRow({ label, years, pillStyle, deleteMode, deleted, onToggleDel
           fontWeight: 700,
           display: 'inline-block',
           textDecoration: deleted ? 'line-through' : 'none',
+          opacity: deleted ? 0.4 : 1,
+          transition: 'opacity 0.15s',
         }}>
           {label}
         </span>
       </div>
-      <span style={{ fontSize: 9, color: '#a09080' }}>{years}y</span>
+      <span style={{ fontSize: 9, color: '#a09080', opacity: deleted ? 0.4 : 1, transition: 'opacity 0.15s' }}>{years}y</span>
     </div>
   )
 }
