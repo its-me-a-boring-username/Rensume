@@ -288,6 +288,13 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
     }
   }
 
+  const roleLabelCount = new Map()
+  for (const [, agg] of byName) {
+    for (const roleIndex of agg.roleIndexes) {
+      roleLabelCount.set(roleIndex, (roleLabelCount.get(roleIndex) || 0) + 1)
+    }
+  }
+
   const toEvidence = (rows) => {
     const seen = new Set()
     const candidates = []
@@ -303,6 +310,11 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
 
     if (sortBy === 'recency') {
       candidates.sort((a, b) => a.role_index - b.role_index)
+    } else if (sortBy === 'relevancy') {
+      candidates.sort((a, b) =>
+        (roleLabelCount.get(a.role_index) || 0) - (roleLabelCount.get(b.role_index) || 0) ||
+        (roles[b.role_index]?.months || 0) - (roles[a.role_index]?.months || 0)
+      )
     } else {
       candidates.sort((a, b) => (roles[b.role_index]?.months || 0) - (roles[a.role_index]?.months || 0))
     }
@@ -445,7 +457,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
 
   const functions       = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'functions',       functionNames, MAX_EVIDENCE_CHARS, MAX_EVIDENCE_SNIPPETS_PER_LABEL, 'recency'))
   const industriesOut   = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'industries',      industryNames, MAX_INDUSTRY_EVIDENCE_CHARS, MAX_INDUSTRY_EVIDENCE_LINES))
-  const knowledgeAreasOut = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, kaAssignments,   'knowledge_areas', knowledgeAreaNames))
+  const knowledgeAreasOut = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, kaAssignments,   'knowledge_areas', knowledgeAreaNames, MAX_EVIDENCE_CHARS, MAX_EVIDENCE_SNIPPETS_PER_LABEL, 'relevancy'))
 
   return {
     summary:         String(shared?.summary || ''),
