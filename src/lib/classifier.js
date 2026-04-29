@@ -247,7 +247,7 @@ function truncateEvidence(str, maxChars = MAX_EVIDENCE_CHARS) {
   return (lastSpace > maxChars * 0.5 ? cut.slice(0, lastSpace) : cut).replace(/[,;:]$/, '') + '…'
 }
 
-function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames, maxChars = MAX_EVIDENCE_CHARS, maxLines = MAX_EVIDENCE_SNIPPETS_PER_LABEL, sortBy = 'tenure') {
+function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames, maxChars = MAX_EVIDENCE_CHARS, maxLines = MAX_EVIDENCE_SNIPPETS_PER_LABEL, sortBy = 'tenure', joinStyle = 'and') {
   const canonical = buildCanonicalNameMap(allowedNames)
   const byName = new Map()
   const monthsAdded = new Set()
@@ -339,7 +339,18 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
     if (sortBy === 'recency') {
       selected.sort((a, b) => (roles[b.role_index]?.months || 0) - (roles[a.role_index]?.months || 0))
     }
-    return selected.map(s => s.evidence.replace(/[.,;:!?]+$/, '').trim()).join(', and ')
+    const formatted = selected.map((s, i) => {
+      const t = s.evidence.replace(/[.,;:!?]+$/, '').trim()
+      if (!t) return ''
+      return (i === 0 ? t.charAt(0).toUpperCase() : t.charAt(0).toLowerCase()) + t.slice(1)
+    }).filter(Boolean)
+    if (!formatted.length) return ''
+    if (joinStyle === 'list') {
+      if (formatted.length === 1) return formatted[0]
+      if (formatted.length === 2) return formatted[0] + ', ' + formatted[1]
+      return formatted.slice(0, -1).join(', ') + ', and ' + formatted[formatted.length - 1]
+    }
+    return formatted.join(', and ')
   }
 
   return Array.from(byName.values())
@@ -460,7 +471,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   const sharedAssignments = Array.isArray(shared?.role_assignments)   ? shared.role_assignments   : []
   const kaAssignments     = Array.isArray(kaResult?.role_assignments) ? kaResult.role_assignments : []
 
-  const functions       = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'functions',       functionNames, MAX_EVIDENCE_CHARS, MAX_FUNCTION_EVIDENCE_SNIPPETS,     'recency'))
+  const functions       = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'functions',       functionNames, MAX_EVIDENCE_CHARS, MAX_FUNCTION_EVIDENCE_SNIPPETS,     'recency', 'list'))
   const industriesOut   = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'industries',      industryNames, MAX_INDUSTRY_EVIDENCE_CHARS, MAX_INDUSTRY_EVIDENCE_LINES))
   const knowledgeAreasOut = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, kaAssignments,   'knowledge_areas', knowledgeAreaNames, MAX_EVIDENCE_CHARS, MAX_EVIDENCE_SNIPPETS_PER_LABEL, 'relevancy'))
 
