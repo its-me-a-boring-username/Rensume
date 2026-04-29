@@ -47,7 +47,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Function levels are independent. Do not infer a higher level by combining two lower-level signals.
 - Do not assign Strategic Manager unless the role text contains explicit evidence of managing people or teams. Broad scope of responsibility alone is not sufficient.
 - Use exact label names from the provided lists.
-- Evidence should be a concise independent clause in third person, paraphrased from the role text. The original meaning must be preserved. Resolve vague references (e.g. 'this workflow', 'our team') using specific terms from the role text. Do not fabricate outcomes not stated in the role text. Target: 110 characters per snippet.
+- Evidence should be a concise independent clause in third person past tense (e.g. 'built' not 'builds'), paraphrased from the role text. The original meaning must be preserved. Resolve vague references (e.g. 'this workflow', 'our team') using specific terms from the role text. Do not fabricate outcomes not stated in the role text. Target: 110 characters per snippet.
 - For industry evidence: describe the employer's business sector only. Do not reference specific roles, programs, or projects. Name the employer (e.g. 'cryptocurrency exchange Coinbase', 'banking provider Simple Finance'). Maximum 80 characters.
 - Use single quotes inside evidence strings.
 
@@ -82,7 +82,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Use only the provided parsed role data.
 - For each role_index, assign zero or more knowledge area labels.
 - Use exact names from the provided list.
-- Evidence should be a concise independent clause in third person, paraphrased from the role text. The original meaning must be preserved. Resolve vague references (e.g. 'this workflow', 'our team') using specific terms from the role text. Do not fabricate outcomes not stated in the role text. Target: 110 characters per snippet.
+- Evidence should be a concise independent clause in third person past tense (e.g. 'built' not 'builds'), paraphrased from the role text. The original meaning must be preserved. Resolve vague references (e.g. 'this workflow', 'our team') using specific terms from the role text. Do not fabricate outcomes not stated in the role text. Target: 110 characters per snippet.
 - Keep coverage broad but precise; avoid collapsing distinct domains.
 
 Allowed knowledge area names (exact):
@@ -322,7 +322,7 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
         selected.push(row.evidence)
       }
     }
-    return selected.join(', and ')
+    return selected.map(s => s.replace(/[.,;:!?]+$/, '').trim()).join(', and ')
   }
 
   return Array.from(byName.values())
