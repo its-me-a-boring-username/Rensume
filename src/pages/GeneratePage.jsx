@@ -293,8 +293,20 @@ export default function GeneratePage() {
   const [loadingMsg, setLoadingMsg]   = useState('')
   const [error, setError]             = useState('')
   const [downloading, setDownloading] = useState(false)
+  const [deletedNames, setDeletedNames] = useState([])
 
   const loading = state === 'loading'
+
+  const filteredProfile = profile ? {
+    ...profile,
+    functions:       profile.functions.filter(fn  => !deletedNames.includes(fn.name)),
+    knowledge_areas: profile.knowledge_areas.filter(ka  => !deletedNames.includes(ka.name)),
+    industries:      profile.industries.filter(ind => !deletedNames.includes(ind.name)),
+  } : null
+
+  const toggleDelete = (name) => {
+    setDeletedNames(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name])
+  }
 
   const handleGenerate = async () => {
     if (!resumeText.trim()) { setError('Add a resume first.'); return }
@@ -308,18 +320,17 @@ export default function GeneratePage() {
     } finally { setLoadingMsg('') }
   }
 
-  const handleRegenerate = () => { setState('input'); setProfile(null); setError('') }
-  const handleFlag = (flaggedItems, note) => { console.log('Flag submitted:', { flaggedItems, note, profile }) }
+  const handleRegenerate = () => { setState('input'); setProfile(null); setDeletedNames([]); setError('') }
   const handleDownload = async () => {
-    if (!profile) return
+    if (!filteredProfile) return
     setDownloading(true)
-    try { await downloadCardPdf(profile, theme) }
+    try { await downloadCardPdf(filteredProfile, theme) }
     catch (e) { alert(`PDF error: ${e.message}`); console.error('PDF generation failed:', e) }
     finally { setDownloading(false) }
   }
 
   const inputProps = { resumeText, setResumeText, inputMode, setInputMode, pdfFilename, setPdfFilename, error, setError, loading, handleGenerate }
-  const resultProps = { profile, theme, setTheme, saveMode, setSaveMode, handleDownload, downloading }
+  const resultProps = { profile: filteredProfile, theme, setTheme, saveMode, setSaveMode, handleDownload, downloading }
 
   return (
     <div style={{ fontFamily: '-apple-system, Arial, sans-serif', background: '#faf8f4', minHeight: '100vh' }}>
@@ -330,7 +341,7 @@ export default function GeneratePage() {
       <div className="split-layout">
         <div className="left-panel">
           {state === 'review'
-            ? <ReviewPanel profile={profile} onRegenerate={handleRegenerate} onFlag={handleFlag} />
+            ? <ReviewPanel profile={profile} onRegenerate={handleRegenerate} deletedNames={deletedNames} onToggleDelete={toggleDelete} />
             : <InputContent {...inputProps} />
           }
         </div>

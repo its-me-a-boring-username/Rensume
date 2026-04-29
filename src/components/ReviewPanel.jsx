@@ -1,20 +1,15 @@
 // src/components/ReviewPanel.jsx
 // Left panel of the generate/review page in State 2.
-// Shows classified taxonomy rows — read only.
-// Includes the flag flow at the bottom.
+// Shows classified taxonomy rows with per-item delete controls.
 
 import { useState } from 'react'
 import { getSeniorityLabel } from '../lib/classifier'
-
-// ─── Pill styles by dimension ─────────────────────────────────────────────────
 
 const PILL_STYLES = {
   fn:  { background: '#2c3038', color: '#c87090' },
   ka:  { background: '#904060', color: '#1a0810' },
   ind: { background: '#edeae6', color: '#403830', border: '0.5px solid #c8c0b8' },
 }
-
-// ─── Section header ───────────────────────────────────────────────────────────
 
 function SectionHeader({ label }) {
   return (
@@ -33,9 +28,7 @@ function SectionHeader({ label }) {
   )
 }
 
-// ─── Taxonomy row ─────────────────────────────────────────────────────────────
-
-function TaxonomyRow({ label, years, pillStyle, flagMode, flagged, onToggleFlag }) {
+function TaxonomyRow({ label, years, pillStyle, deleteMode, deleted, onToggleDelete }) {
   return (
     <div style={{
       display: 'flex',
@@ -43,14 +36,15 @@ function TaxonomyRow({ label, years, pillStyle, flagMode, flagged, onToggleFlag 
       justifyContent: 'space-between',
       padding: '7px 0',
       borderBottom: '0.5px solid #ede8e2',
-      background: flagged ? '#fdf5f6' : 'transparent',
+      opacity: deleted ? 0.4 : 1,
+      transition: 'opacity 0.15s',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {flagMode && (
+        {deleteMode && (
           <input
             type="checkbox"
-            checked={flagged}
-            onChange={onToggleFlag}
+            checked={deleted}
+            onChange={onToggleDelete}
             style={{ accentColor: '#904060', flexShrink: 0 }}
           />
         )}
@@ -61,6 +55,7 @@ function TaxonomyRow({ label, years, pillStyle, flagMode, flagged, onToggleFlag 
           fontSize: 8.5,
           fontWeight: 700,
           display: 'inline-block',
+          textDecoration: deleted ? 'line-through' : 'none',
         }}>
           {label}
         </span>
@@ -70,120 +65,20 @@ function TaxonomyRow({ label, years, pillStyle, flagMode, flagged, onToggleFlag 
   )
 }
 
-// ─── Flag form ────────────────────────────────────────────────────────────────
-
-function FlagForm({ flagged, onSubmit, onCancel }) {
-  const [note, setNote] = useState('')
-  const hasFlags = flagged.length > 0
-
-  return (
-    <div style={{
-      marginTop: 12,
-      background: '#f5f1eb',
-      border: '0.5px solid #d8d0c4',
-      borderRadius: 6,
-      padding: 14,
-    }}>
-      {hasFlags ? (
-        <div style={{ fontSize: 9.5, color: '#1a1410', marginBottom: 10 }}>
-          <strong>Flagged: </strong>{flagged.join(', ')}
-        </div>
-      ) : (
-        <div style={{ fontSize: 9.5, color: '#a09080', marginBottom: 10 }}>
-          No items selected yet — check the boxes next to any items that look wrong.
-        </div>
-      )}
-
-      <textarea
-        value={note}
-        onChange={e => setNote(e.target.value)}
-        placeholder="Describe what looks wrong and what you'd expect instead..."
-        style={{
-          width: '100%',
-          fontSize: 10,
-          padding: '8px 10px',
-          border: '0.5px solid #d8d0c4',
-          borderRadius: 4,
-          background: 'white',
-          color: '#1a1410',
-          resize: 'none',
-          height: 72,
-          fontFamily: 'inherit',
-          boxSizing: 'border-box',
-        }}
-      />
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
-        <button
-          onClick={onCancel}
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            padding: '6px 14px',
-            borderRadius: 3,
-            background: 'transparent',
-            color: '#a09080',
-            border: '1px solid #d8d0c4',
-            cursor: 'pointer',
-          }}
-        >
-          Cancel
-        </button>
-        <button
-          onClick={() => hasFlags && onSubmit(flagged, note)}
-          disabled={!hasFlags}
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            padding: '6px 14px',
-            borderRadius: 3,
-            background: hasFlags ? '#904060' : '#d8d0c4',
-            color: '#fff',
-            border: 'none',
-            cursor: hasFlags ? 'pointer' : 'not-allowed',
-          }}
-        >
-          Submit flag
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ─── ReviewPanel ──────────────────────────────────────────────────────────────
-
 /**
  * Props:
- *   profile      — classified profile from classifier.js
- *   onRegenerate — () => void
- *   onFlag       — (flaggedItems: string[], note: string) => void
+ *   profile        — original classified profile from classifier.js
+ *   onRegenerate   — () => void
+ *   deletedNames   — string[] of label names removed by the user
+ *   onToggleDelete — (name: string) => void
  */
-export default function ReviewPanel({ profile, onRegenerate, onFlag }) {
-  const [flagMode, setFlagMode]       = useState(false)
-  const [flagged, setFlagged]         = useState([])
-  const [flagSubmitted, setFlagSubmitted] = useState(false)
+export default function ReviewPanel({ profile, onRegenerate, deletedNames = [], onToggleDelete }) {
+  const [deleteMode, setDeleteMode] = useState(false)
 
   if (!profile) return null
 
   const { summary, functions = [], knowledge_areas = [], industries = [] } = profile
-
-  const toggleFlag = (label) => {
-    setFlagged(prev =>
-      prev.includes(label) ? prev.filter(f => f !== label) : [...prev, label]
-    )
-  }
-
-  const handleSubmitFlag = (items, note) => {
-    onFlag?.(items, note)
-    setFlagMode(false)
-    setFlagged([])
-    setFlagSubmitted(true)
-  }
-
-  const handleCancelFlag = () => {
-    setFlagMode(false)
-    setFlagged([])
-  }
+  const deletedCount = deletedNames.length
 
   return (
     <div style={{ fontFamily: '-apple-system, Arial, sans-serif' }}>
@@ -196,9 +91,9 @@ export default function ReviewPanel({ profile, onRegenerate, onFlag }) {
         Does this look right?
       </div>
       <p style={{ fontSize: 11.5, color: '#706050', lineHeight: 1.7, marginBottom: 20 }}>
-        {flagMode
-          ? 'Check the items that look wrong, then add a note below.'
-          : 'Review each section. If something looks wrong, flag it for our team to review.'}
+        {deleteMode
+          ? 'Check the boxes next to any labels you want to remove from your card.'
+          : 'Review each section. Remove any labels that don\'t look right.'}
       </p>
 
       {/* Summary */}
@@ -219,9 +114,9 @@ export default function ReviewPanel({ profile, onRegenerate, onFlag }) {
                 label={label}
                 years={fn.years}
                 pillStyle={PILL_STYLES.fn}
-                flagMode={flagMode}
-                flagged={flagged.includes(label)}
-                onToggleFlag={() => toggleFlag(label)}
+                deleteMode={deleteMode}
+                deleted={deletedNames.includes(fn.name)}
+                onToggleDelete={() => onToggleDelete(fn.name)}
               />
             )
           })}
@@ -238,9 +133,9 @@ export default function ReviewPanel({ profile, onRegenerate, onFlag }) {
               label={ka.name}
               years={ka.years}
               pillStyle={PILL_STYLES.ka}
-              flagMode={flagMode}
-              flagged={flagged.includes(ka.name)}
-              onToggleFlag={() => toggleFlag(ka.name)}
+              deleteMode={deleteMode}
+              deleted={deletedNames.includes(ka.name)}
+              onToggleDelete={() => onToggleDelete(ka.name)}
             />
           ))}
         </>
@@ -256,9 +151,9 @@ export default function ReviewPanel({ profile, onRegenerate, onFlag }) {
               label={ind.name}
               years={ind.years}
               pillStyle={PILL_STYLES.ind}
-              flagMode={flagMode}
-              flagged={flagged.includes(ind.name)}
-              onToggleFlag={() => toggleFlag(ind.name)}
+              deleteMode={deleteMode}
+              deleted={deletedNames.includes(ind.name)}
+              onToggleDelete={() => onToggleDelete(ind.name)}
             />
           ))}
         </>
@@ -266,31 +161,38 @@ export default function ReviewPanel({ profile, onRegenerate, onFlag }) {
 
       {/* Bottom actions */}
       <div style={{ marginTop: 20, paddingTop: 16, borderTop: '0.5px solid #d8d0c4' }}>
-
-        {flagSubmitted ? (
-          <div style={{
-            background: '#eaf4ee',
-            border: '0.5px solid #b0d8b8',
-            borderRadius: 6,
-            padding: '10px 14px',
-            marginBottom: 12,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#2a7a50', flexShrink: 0 }} />
-              <div style={{ fontSize: 10, color: '#2a6040', lineHeight: 1.6 }}>
-                Thanks — we've received your flag and will review it within 2 business days. Your card has been saved as-is.
-              </div>
-            </div>
+        {deleteMode ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 10, color: '#a09080' }}>
+              {deletedCount > 0
+                ? `${deletedCount} label${deletedCount !== 1 ? 's' : ''} removed`
+                : 'No labels removed yet'}
+            </span>
+            <button
+              onClick={() => setDeleteMode(false)}
+              style={{
+                background: '#904060',
+                color: '#fff',
+                border: 'none',
+                fontSize: 11,
+                fontWeight: 700,
+                padding: '9px 18px',
+                borderRadius: 3,
+                cursor: 'pointer',
+              }}
+            >
+              Done
+            </button>
           </div>
-        ) : flagMode ? (
-          <FlagForm flagged={flagged} onSubmit={handleSubmitFlag} onCancel={handleCancelFlag} />
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span
-              onClick={() => setFlagMode(true)}
+              onClick={() => setDeleteMode(true)}
               style={{ fontSize: 10, color: '#a09080', cursor: 'pointer', textDecoration: 'underline', textDecorationColor: '#d8d0c4' }}
             >
-              Something look wrong? Flag it →
+              {deletedCount > 0
+                ? `${deletedCount} label${deletedCount !== 1 ? 's' : ''} removed · Edit →`
+                : 'Remove a label →'}
             </span>
             <button
               onClick={onRegenerate}
@@ -309,7 +211,6 @@ export default function ReviewPanel({ profile, onRegenerate, onFlag }) {
             </button>
           </div>
         )}
-
       </div>
     </div>
   )
