@@ -161,56 +161,33 @@ export default function ReviewPanel({ profile, onRegenerate, deletedNames = [], 
 
       {/* Bottom actions */}
       <div style={{ marginTop: 20, paddingTop: 16, borderTop: '0.5px solid #d8d0c4' }}>
-        {deleteMode ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 10, color: '#a09080' }}>
-              {deletedCount > 0
-                ? `${deletedCount} label${deletedCount !== 1 ? 's' : ''} removed`
-                : 'No labels removed yet'}
-            </span>
-            <button
-              onClick={() => setDeleteMode(false)}
-              style={{
-                background: '#904060',
-                color: '#fff',
-                border: 'none',
-                fontSize: 11,
-                fontWeight: 700,
-                padding: '9px 18px',
-                borderRadius: 3,
-                cursor: 'pointer',
-              }}
-            >
-              Done
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span
-              onClick={() => setDeleteMode(true)}
-              style={{ fontSize: 10, color: '#a09080', cursor: 'pointer', textDecoration: 'underline', textDecorationColor: '#d8d0c4' }}
-            >
-              {deletedCount > 0
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span
+            onClick={() => setDeleteMode(m => !m)}
+            style={{ fontSize: 10, color: '#a09080', cursor: 'pointer', textDecoration: 'underline', textDecorationColor: '#d8d0c4' }}
+          >
+            {deleteMode
+              ? 'Done removing'
+              : deletedCount > 0
                 ? `${deletedCount} label${deletedCount !== 1 ? 's' : ''} removed · Edit →`
                 : 'Remove a label →'}
-            </span>
-            <button
-              onClick={onRegenerate}
-              style={{
-                background: 'transparent',
-                color: '#706050',
-                border: '1px solid #d8d0c4',
-                fontSize: 11,
-                fontWeight: 700,
-                padding: '9px 18px',
-                borderRadius: 3,
-                cursor: 'pointer',
-              }}
-            >
-              Re-generate
-            </button>
-          </div>
-        )}
+          </span>
+          <button
+            onClick={onRegenerate}
+            style={{
+              background: 'transparent',
+              color: '#706050',
+              border: '1px solid #d8d0c4',
+              fontSize: 11,
+              fontWeight: 700,
+              padding: '9px 18px',
+              borderRadius: 3,
+              cursor: 'pointer',
+            }}
+          >
+            Re-generate
+          </button>
+        </div>
       </div>
     </div>
   )
