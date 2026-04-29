@@ -6,7 +6,7 @@ import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels }
 
 const MAX_EVIDENCE_SNIPPETS_PER_LABEL    = 2
 const MAX_FUNCTION_EVIDENCE_SNIPPETS     = 3
-const MAX_EVIDENCE_CHARS                 = 110
+const MAX_EVIDENCE_CHARS                 = 120
 const MAX_INDUSTRY_EVIDENCE_LINES        = 1
 const MAX_INDUSTRY_EVIDENCE_CHARS        = 80
 const MAX_INDUSTRIES_RETURNED            = 3
@@ -48,8 +48,8 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Function levels are independent. Do not infer a higher level by combining two lower-level signals.
 - Do not assign Strategic Manager or Strategic Executive unless the role text explicitly mentions direct reports. Broad scope of responsibility alone is not sufficient.
 - Use exact label names from the provided lists.
-- Evidence should be a concise independent clause in third person past tense (e.g. 'built' not 'builds'), paraphrased from the role text. The original meaning must be preserved. Resolve vague references (e.g. 'this workflow', 'our team') using specific terms from the role text. Do not fabricate outcomes not stated in the role text. Target: 110 characters per snippet.
-- Paraphrasing examples: 'trained BPOs on this workflow to expand capacity' → 'Trained BPOs on complaints screening workflow to expand team capacity' | 'I led the national small claims strategy, achieving a defense success rate of over 90% across cases filed against us' → 'Led national small claims strategy and achieved a defense success rate of over 90%' | 'Led the full architectural rebuild of Chapter 4's codebase from the ground up, designing modular, scalable systems built to support not just the chapter but Mob's long-term game development roadmap' → 'Led an architectural rebuild of Chapter 4's codebase with modular, scalable systems designed to support a long-term development roadmap'
+- Evidence should be a concise independent clause in third person past tense (e.g. 'built' not 'builds'), paraphrased from the role text. The original meaning must be preserved. Resolve vague references (e.g. 'this workflow', 'our team') using specific terms from the role text. Do not fabricate outcomes not stated in the role text. Hard limit: 120 characters per snippet — if the paraphrase is too long, drop filler words and secondary context until it fits.
+- Paraphrasing examples: 'trained BPOs on this workflow to expand capacity' → 'Trained BPOs on complaints screening workflow to expand team capacity' (68 chars) | 'I led the national small claims strategy, achieving a defense success rate of over 90% across cases filed against us' → 'Led national small claims strategy and achieved a defense success rate of over 90%' (82 chars) | 'System Architecture & Development: Spearheaded end-to-end development and launch of a data analytics SaaS platform for Instagram influencers, enabling engagement trend prediction and content ROI analysis' → 'Spearheaded development and launch of an analytics platform for Instagram enabling trend prediction and content ROI' (115 chars)
 - For industry evidence: describe the employer's business sector only. Do not reference specific roles, programs, or projects. Name the employer (e.g. 'cryptocurrency exchange Coinbase', 'banking provider Simple Finance'). Maximum 80 characters.
 - Use single quotes inside evidence strings.
 
