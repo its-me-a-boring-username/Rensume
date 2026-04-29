@@ -302,23 +302,16 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
     }
     if (!candidates.length) return ''
 
-    const score = (text) => {
-      let s = Math.min(text.length, 220)
-      if (/\d/.test(text)) s += 10
-      return s
-    }
-
-    const ranked = [...candidates].sort((a, b) => score(b.evidence) - score(a.evidence))
     const selected = []
     const usedRoles = new Set()
-    for (const row of ranked) {
+    for (const row of candidates) {
       if (selected.length >= maxLines) break
       if (usedRoles.has(row.role_index)) continue
       selected.push(row.evidence)
       usedRoles.add(row.role_index)
     }
     if (selected.length < maxLines) {
-      for (const row of ranked) {
+      for (const row of candidates) {
         if (selected.length >= maxLines) break
         if (selected.includes(row.evidence)) continue
         selected.push(row.evidence)
