@@ -4,12 +4,13 @@
 
 import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels } from './taxonomy.js'
 
-const MAX_EVIDENCE_SNIPPETS_PER_LABEL = 2
-const MAX_EVIDENCE_CHARS              = 110
-const MAX_INDUSTRY_EVIDENCE_LINES     = 1
-const MAX_INDUSTRY_EVIDENCE_CHARS    = 80
-const MAX_INDUSTRIES_RETURNED        = 3
-const MAX_KNOWLEDGE_AREAS_RETURNED   = 6
+const MAX_EVIDENCE_SNIPPETS_PER_LABEL    = 2
+const MAX_FUNCTION_EVIDENCE_SNIPPETS     = 3
+const MAX_EVIDENCE_CHARS                 = 110
+const MAX_INDUSTRY_EVIDENCE_LINES        = 1
+const MAX_INDUSTRY_EVIDENCE_CHARS        = 80
+const MAX_INDUSTRIES_RETURNED            = 3
+const MAX_KNOWLEDGE_AREAS_RETURNED       = 5
 
 const PEOPLE_MANAGER_DEFINITION =
   'Manages people who execute defined processes. This includes guiding or directing the work of other employees, contractors, and BPOs (business process outsourcing partners) who may or may not be direct reports'
@@ -324,17 +325,20 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
     for (const row of candidates) {
       if (selected.length >= maxLines) break
       if (usedRoles.has(row.role_index)) continue
-      selected.push(row.evidence)
+      selected.push({ role_index: row.role_index, evidence: row.evidence })
       usedRoles.add(row.role_index)
     }
     if (selected.length < maxLines) {
       for (const row of candidates) {
         if (selected.length >= maxLines) break
-        if (selected.includes(row.evidence)) continue
-        selected.push(row.evidence)
+        if (selected.find(s => s.evidence === row.evidence)) continue
+        selected.push({ role_index: row.role_index, evidence: row.evidence })
       }
     }
-    return selected.map(s => s.replace(/[.,;:!?]+$/, '').trim()).join(', and ')
+    if (sortBy === 'recency') {
+      selected.sort((a, b) => (roles[b.role_index]?.months || 0) - (roles[a.role_index]?.months || 0))
+    }
+    return selected.map(s => s.evidence.replace(/[.,;:!?]+$/, '').trim()).join(', and ')
   }
 
   return Array.from(byName.values())
@@ -455,7 +459,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   const sharedAssignments = Array.isArray(shared?.role_assignments)   ? shared.role_assignments   : []
   const kaAssignments     = Array.isArray(kaResult?.role_assignments) ? kaResult.role_assignments : []
 
-  const functions       = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'functions',       functionNames, MAX_EVIDENCE_CHARS, MAX_EVIDENCE_SNIPPETS_PER_LABEL, 'recency'))
+  const functions       = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'functions',       functionNames, MAX_EVIDENCE_CHARS, MAX_FUNCTION_EVIDENCE_SNIPPETS,     'recency'))
   const industriesOut   = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'industries',      industryNames, MAX_INDUSTRY_EVIDENCE_CHARS, MAX_INDUSTRY_EVIDENCE_LINES))
   const knowledgeAreasOut = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, kaAssignments,   'knowledge_areas', knowledgeAreaNames, MAX_EVIDENCE_CHARS, MAX_EVIDENCE_SNIPPETS_PER_LABEL, 'relevancy'))
 
