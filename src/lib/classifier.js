@@ -5,7 +5,7 @@
 import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels } from './taxonomy.js'
 
 const MAX_EVIDENCE_SNIPPETS_PER_LABEL = 2
-const MAX_EVIDENCE_CHARS              = 120
+const MAX_EVIDENCE_CHARS              = 110
 const MAX_INDUSTRY_EVIDENCE_LINES     = 1
 const MAX_INDUSTRY_EVIDENCE_CHARS    = 80
 const MAX_INDUSTRIES_RETURNED        = 3
@@ -47,7 +47,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Function levels are independent. Do not infer a higher level by combining two lower-level signals.
 - Do not assign Strategic Manager unless the role text contains explicit evidence of managing people or teams. Broad scope of responsibility alone is not sufficient.
 - Use exact label names from the provided lists.
-- Evidence should be a direct quote or close paraphrase from the role text. Minor rewording is acceptable but the original meaning must be preserved. Use single quotes inside evidence strings. Hard limit: 120 characters per snippet.
+- Evidence should be a direct quote or close paraphrase from the role text. Minor rewording is acceptable but the original meaning must be preserved. Use single quotes inside evidence strings. Target: 110 characters per snippet.
 - For industry evidence: describe the employer's business sector only. Do not reference specific roles, programs, or projects. Name the employer (e.g. 'cryptocurrency exchange Coinbase', 'banking provider Simple Finance'). Maximum 80 characters.
 - Use single quotes inside evidence strings.
 
@@ -82,7 +82,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Use only the provided parsed role data.
 - For each role_index, assign zero or more knowledge area labels.
 - Use exact names from the provided list.
-- Evidence should be a direct quote or close paraphrase from the role text. Minor rewording is acceptable but the original meaning must be preserved. Use single quotes inside evidence strings. Maximum 120 characters per snippet.
+- Evidence should be a direct quote or close paraphrase from the role text. Minor rewording is acceptable but the original meaning must be preserved. Use single quotes inside evidence strings. Target: 110 characters per snippet.
 - Keep coverage broad but precise; avoid collapsing distinct domains.
 
 Allowed knowledge area names (exact):
@@ -291,7 +291,7 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
     const seen = new Set()
     const candidates = []
     for (const row of rows || []) {
-      const t = truncateEvidence(row?.evidence, maxChars)
+      const t = String(row?.evidence || '').trim()
       if (!t) continue
       const dedupeKey = `${row.role_index}::${t.toLowerCase()}`
       if (seen.has(dedupeKey)) continue
