@@ -84,7 +84,8 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Use only the provided parsed role data.
 - For each role_index, assign zero or more knowledge area labels.
 - Use exact names from the provided list.
-- Evidence should be a concise independent clause in third person past tense (e.g. 'built' not 'builds'), paraphrased from the role text. The original meaning must be preserved. Resolve vague references (e.g. 'this workflow', 'our team') using specific terms from the role text. Do not fabricate outcomes not stated in the role text. Target: 110 characters per snippet.
+- Evidence should be a concise independent clause in third person past tense (e.g. 'built' not 'builds'), paraphrased from the role text. The original meaning must be preserved. Resolve vague references (e.g. 'this workflow', 'our team') using specific terms from the role text. Do not fabricate outcomes not stated in the role text. Hard limit: 120 characters per snippet — if the paraphrase is too long, drop filler words and secondary context until it fits.
+- Before writing evidence for a label, verify the activity described genuinely falls within that knowledge area's occupational domain — not just its subject matter or thematic context.
 - Keep coverage broad but precise; avoid collapsing distinct domains.
 
 Allowed knowledge area names (exact):
