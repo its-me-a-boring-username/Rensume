@@ -463,7 +463,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
         doc.text(tool, tx + tw / 2, ry + CHIP_H / 2 + lh(7.5, 0.28), { align: 'center' })
         tx += tw + CHIP_GAP
       })
-      right.setY(right.getY() + CHIP_H + SP.sectionGap * 2)
+      right.setY(right.getY() + CHIP_H + SP.sectionGap * 3)
     }
 
     // 7. Credentials
