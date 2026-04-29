@@ -48,6 +48,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Do not assign Strategic Manager or Strategic Executive unless the role text explicitly mentions direct reports. Broad scope of responsibility alone is not sufficient.
 - Use exact label names from the provided lists.
 - Evidence should be a concise independent clause in third person past tense (e.g. 'built' not 'builds'), paraphrased from the role text. The original meaning must be preserved. Resolve vague references (e.g. 'this workflow', 'our team') using specific terms from the role text. Do not fabricate outcomes not stated in the role text. Target: 110 characters per snippet.
+- Function level evidence must describe HOW work was performed — scope of responsibility, process ownership, management or advisory activities. Do not describe domain subject matter (e.g. what product or compliance area the work touched).
 - Paraphrasing examples: 'trained BPOs on this workflow to expand capacity' → 'Trained BPOs on complaints screening workflow to expand team capacity' | 'I led the national small claims strategy, achieving a defense success rate of over 90% across cases filed against us' → 'Led national small claims strategy and achieved a defense success rate of over 90%' | 'Led the full architectural rebuild of Chapter 4's codebase from the ground up, designing modular, scalable systems built to support not just the chapter but Mob's long-term game development roadmap' → 'Led an architectural rebuild of Chapter 4's codebase with modular, scalable systems designed to support a long-term development roadmap'
 - For industry evidence: describe the employer's business sector only. Do not reference specific roles, programs, or projects. Name the employer (e.g. 'cryptocurrency exchange Coinbase', 'banking provider Simple Finance'). Maximum 80 characters.
 - Use single quotes inside evidence strings.
@@ -84,8 +85,8 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - For each role_index, assign zero or more knowledge area labels.
 - Use exact names from the provided list.
 - Evidence should be a concise independent clause in third person past tense (e.g. 'built' not 'builds'), paraphrased from the role text. The original meaning must be preserved. Resolve vague references (e.g. 'this workflow', 'our team') using specific terms from the role text. Do not fabricate outcomes not stated in the role text. Target: 110 characters per snippet.
-- Paraphrasing examples: 'trained BPOs on this workflow to expand capacity' → 'Trained BPOs on complaints screening workflow to expand team capacity' | 'I led the national small claims strategy, achieving a defense success rate of over 90% across cases filed against us' → 'Led national small claims strategy and achieved a defense success rate of over 90%' | 'Led the full architectural rebuild of Chapter 4's codebase from the ground up, designing modular, scalable systems built to support not just the chapter but Mob's long-term game development roadmap' → 'Led an architectural rebuild of Chapter 4's codebase with modular, scalable systems designed to support a long-term development roadmap'
-- Keep coverage broad but precise; avoid collapsing distinct domains.
+- Knowledge area evidence must describe WHAT subject matter was applied — domain expertise, technical knowledge, analytical methods, or specialist skills. Do not describe management or process activities (e.g. 'oversaw', 'managed', 'designed workflows') — that belongs in function level evidence.
+- Keep coverage broad but precise. Do not collapse distinct technical domains: if a role involves AI, machine learning, LLM evaluation, or data annotation, assign the most applicable available knowledge area rather than absorbing it into a broader operational label.
 
 Allowed knowledge area names (exact):
 ${formatKAList(knowledgeAreas)}
@@ -246,7 +247,7 @@ function truncateEvidence(str, maxChars = MAX_EVIDENCE_CHARS) {
   return (lastSpace > maxChars * 0.5 ? cut.slice(0, lastSpace) : cut).replace(/[,;:]$/, '') + '…'
 }
 
-function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames, maxChars = MAX_EVIDENCE_CHARS, maxLines = MAX_EVIDENCE_SNIPPETS_PER_LABEL) {
+function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames, maxChars = MAX_EVIDENCE_CHARS, maxLines = MAX_EVIDENCE_SNIPPETS_PER_LABEL, sortBy = 'tenure') {
   const canonical = buildCanonicalNameMap(allowedNames)
   const byName = new Map()
   const monthsAdded = new Set()
@@ -302,9 +303,11 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
     }
     if (!candidates.length) return ''
 
-    candidates.sort((a, b) =>
-      (roles[b.role_index]?.months || 0) - (roles[a.role_index]?.months || 0)
-    )
+    if (sortBy === 'recency') {
+      candidates.sort((a, b) => a.role_index - b.role_index)
+    } else {
+      candidates.sort((a, b) => (roles[b.role_index]?.months || 0) - (roles[a.role_index]?.months || 0))
+    }
 
     const selected = []
     const usedRoles = new Set()
@@ -442,7 +445,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   const sharedAssignments = Array.isArray(shared?.role_assignments)   ? shared.role_assignments   : []
   const kaAssignments     = Array.isArray(kaResult?.role_assignments) ? kaResult.role_assignments : []
 
-  const functions       = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'functions',       functionNames))
+  const functions       = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'functions',       functionNames, MAX_EVIDENCE_CHARS, MAX_EVIDENCE_SNIPPETS_PER_LABEL, 'recency'))
   const industriesOut   = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'industries',      industryNames, MAX_INDUSTRY_EVIDENCE_CHARS, MAX_INDUSTRY_EVIDENCE_LINES))
   const knowledgeAreasOut = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, kaAssignments,   'knowledge_areas', knowledgeAreaNames))
 
