@@ -4,9 +4,9 @@
 
 import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels } from './taxonomy.js'
 
-const MAX_EVIDENCE_LINES_PER_LABEL   = 5
-const MAX_EVIDENCE_CHARS             = 175
-const MAX_INDUSTRY_EVIDENCE_LINES    = 1
+const MAX_EVIDENCE_SNIPPETS_PER_LABEL = 2
+const MAX_EVIDENCE_CHARS              = 120
+const MAX_INDUSTRY_EVIDENCE_LINES     = 1
 const MAX_INDUSTRY_EVIDENCE_CHARS    = 80
 const MAX_INDUSTRIES_RETURNED        = 3
 const MAX_KNOWLEDGE_AREAS_RETURNED   = 6
@@ -47,7 +47,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Function levels are independent. Do not infer a higher level by combining two lower-level signals.
 - Do not assign Strategic Manager unless the role text contains explicit evidence of managing people or teams. Broad scope of responsibility alone is not sufficient.
 - Use exact label names from the provided lists.
-- Evidence must be one sentence per role, grounded in that role's text, self-contained for a reader who has not seen the resume. Capture the role's contribution to this label. You may replace vague internal references (e.g. 'this workflow') with their specific referent from the same role text. Do not infer capabilities, skills, or outcomes not explicitly stated. Hard limit: 175 characters per sentence.
+- Evidence must be one snippet per role, grounded in that role's text, self-contained for a reader who has not seen the resume. Capture the role's contribution to this label. You may replace vague internal references (e.g. 'this workflow') with their specific referent from the same role text. Do not infer capabilities, skills, or outcomes not explicitly stated. Hard limit: 120 characters per snippet.
 - For industry evidence: describe the employer's business sector only. Do not reference specific roles, programs, or projects. Name the employer (e.g. 'cryptocurrency exchange Coinbase', 'banking provider Simple Finance'). Maximum 80 characters.
 - Use single quotes inside evidence strings.
 
@@ -82,7 +82,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Use only the provided parsed role data.
 - For each role_index, assign zero or more knowledge area labels.
 - Use exact names from the provided list.
-- Evidence must be one sentence per role, grounded in that role's text, self-contained for a reader who has not seen the resume. Capture the role's contribution to this label. You may replace vague internal references with their specific referent from the same role text. Do not infer capabilities, skills, or outcomes not explicitly stated. Maximum 175 characters per sentence.
+- Evidence must be one snippet per role, grounded in that role's text, self-contained for a reader who has not seen the resume. Capture the role's contribution to this label. You may replace vague internal references with their specific referent from the same role text. Do not infer capabilities, skills, or outcomes not explicitly stated. Maximum 120 characters per snippet.
 - Keep coverage broad but precise; avoid collapsing distinct domains.
 
 Allowed knowledge area names (exact):
@@ -244,7 +244,7 @@ function truncateEvidence(str, maxChars = MAX_EVIDENCE_CHARS) {
   return (lastSpace > maxChars * 0.5 ? cut.slice(0, lastSpace) : cut).replace(/[,;:]$/, '') + '…'
 }
 
-function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames, maxChars = MAX_EVIDENCE_CHARS, maxLines = MAX_EVIDENCE_LINES_PER_LABEL) {
+function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames, maxChars = MAX_EVIDENCE_CHARS, maxLines = MAX_EVIDENCE_SNIPPETS_PER_LABEL) {
   const canonical = buildCanonicalNameMap(allowedNames)
   const byName = new Map()
   const monthsAdded = new Set()
@@ -289,17 +289,40 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
 
   const toEvidence = (rows) => {
     const seen = new Set()
-    const picked = []
+    const candidates = []
     for (const row of rows || []) {
       const t = truncateEvidence(row?.evidence, maxChars)
       if (!t) continue
-      const k = t.toLowerCase()
-      if (seen.has(k)) continue
-      seen.add(k)
-      picked.push(t)
-      if (picked.length >= maxLines) break
+      const dedupeKey = `${row.role_index}::${t.toLowerCase()}`
+      if (seen.has(dedupeKey)) continue
+      seen.add(dedupeKey)
+      candidates.push({ role_index: row.role_index, evidence: t })
     }
-    return picked.join(', ')
+    if (!candidates.length) return ''
+
+    const score = (text) => {
+      let s = Math.min(text.length, 220)
+      if (/\d/.test(text)) s += 10
+      return s
+    }
+
+    const ranked = [...candidates].sort((a, b) => score(b.evidence) - score(a.evidence))
+    const selected = []
+    const usedRoles = new Set()
+    for (const row of ranked) {
+      if (selected.length >= maxLines) break
+      if (usedRoles.has(row.role_index)) continue
+      selected.push(row.evidence)
+      usedRoles.add(row.role_index)
+    }
+    if (selected.length < maxLines) {
+      for (const row of ranked) {
+        if (selected.length >= maxLines) break
+        if (selected.includes(row.evidence)) continue
+        selected.push(row.evidence)
+      }
+    }
+    return selected.join(', ')
   }
 
   return Array.from(byName.values())
