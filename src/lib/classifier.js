@@ -48,6 +48,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Do not assign Strategic Manager unless the role text contains explicit evidence of managing people or teams. Broad scope of responsibility alone is not sufficient.
 - Use exact label names from the provided lists.
 - Evidence should be a concise independent clause in third person past tense (e.g. 'built' not 'builds'), paraphrased from the role text. The original meaning must be preserved. Resolve vague references (e.g. 'this workflow', 'our team') using specific terms from the role text. Do not fabricate outcomes not stated in the role text. Target: 110 characters per snippet.
+- Paraphrasing examples: 'trained BPOs on this workflow to expand capacity' → 'Trained BPOs on complaints screening workflow to expand team capacity' | 'I led the national small claims strategy, achieving a defense success rate of over 90% across cases filed against us' → 'Led national small claims strategy and achieved a defense success rate of over 90%' | 'Led the full architectural rebuild of Chapter 4's codebase from the ground up, designing modular, scalable systems built to support not just the chapter but Mob's long-term game development roadmap' → 'Led an architectural rebuild of Chapter 4's codebase with modular, scalable systems designed to support a long-term development roadmap'
 - For industry evidence: describe the employer's business sector only. Do not reference specific roles, programs, or projects. Name the employer (e.g. 'cryptocurrency exchange Coinbase', 'banking provider Simple Finance'). Maximum 80 characters.
 - Use single quotes inside evidence strings.
 
@@ -83,6 +84,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - For each role_index, assign zero or more knowledge area labels.
 - Use exact names from the provided list.
 - Evidence should be a concise independent clause in third person past tense (e.g. 'built' not 'builds'), paraphrased from the role text. The original meaning must be preserved. Resolve vague references (e.g. 'this workflow', 'our team') using specific terms from the role text. Do not fabricate outcomes not stated in the role text. Target: 110 characters per snippet.
+- Paraphrasing examples: 'trained BPOs on this workflow to expand capacity' → 'Trained BPOs on complaints screening workflow to expand team capacity' | 'I led the national small claims strategy, achieving a defense success rate of over 90% across cases filed against us' → 'Led national small claims strategy and achieved a defense success rate of over 90%' | 'Led the full architectural rebuild of Chapter 4's codebase from the ground up, designing modular, scalable systems built to support not just the chapter but Mob's long-term game development roadmap' → 'Led an architectural rebuild of Chapter 4's codebase with modular, scalable systems designed to support a long-term development roadmap'
 - Keep coverage broad but precise; avoid collapsing distinct domains.
 
 Allowed knowledge area names (exact):
