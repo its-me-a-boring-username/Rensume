@@ -47,7 +47,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Function levels are independent. Do not infer a higher level by combining two lower-level signals.
 - Do not assign Strategic Manager unless the role text contains explicit evidence of managing people or teams. Broad scope of responsibility alone is not sufficient.
 - Use exact label names from the provided lists.
-- Evidence must be one snippet per role, grounded in that role's text, self-contained for a reader who has not seen the resume. Capture the role's contribution to this label. You may replace vague internal references (e.g. 'this workflow') with their specific referent from the same role text. Do not infer capabilities, skills, or outcomes not explicitly stated. Hard limit: 120 characters per snippet.
+- Evidence should be a direct quote or close paraphrase from the role text. Minor rewording is acceptable but the original meaning must be preserved. Use single quotes inside evidence strings. Hard limit: 120 characters per snippet.
 - For industry evidence: describe the employer's business sector only. Do not reference specific roles, programs, or projects. Name the employer (e.g. 'cryptocurrency exchange Coinbase', 'banking provider Simple Finance'). Maximum 80 characters.
 - Use single quotes inside evidence strings.
 
@@ -82,7 +82,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Use only the provided parsed role data.
 - For each role_index, assign zero or more knowledge area labels.
 - Use exact names from the provided list.
-- Evidence must be one snippet per role, grounded in that role's text, self-contained for a reader who has not seen the resume. Capture the role's contribution to this label. You may replace vague internal references with their specific referent from the same role text. Do not infer capabilities, skills, or outcomes not explicitly stated. Maximum 120 characters per snippet.
+- Evidence should be a direct quote or close paraphrase from the role text. Minor rewording is acceptable but the original meaning must be preserved. Use single quotes inside evidence strings. Maximum 120 characters per snippet.
 - Keep coverage broad but precise; avoid collapsing distinct domains.
 
 Allowed knowledge area names (exact):
