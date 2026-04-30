@@ -7,7 +7,7 @@ import { fetchTaxonomy, formatKAList, formatIndustryList, formatFunctionLevels }
 const MAX_EVIDENCE_SNIPPETS_PER_LABEL    = 2
 const MAX_FUNCTION_EVIDENCE_SNIPPETS     = 3
 const MAX_EVIDENCE_CHARS                 = 120
-const MAX_INDUSTRY_EVIDENCE_LINES        = 1
+const MAX_INDUSTRY_EVIDENCE_LINES        = 3
 const MAX_INDUSTRY_EVIDENCE_CHARS        = 80
 const MAX_INDUSTRIES_RETURNED            = 3
 const MAX_KNOWLEDGE_AREAS_RETURNED       = 5
@@ -50,7 +50,7 @@ Return ONLY valid JSON. No markdown, no preamble, no backticks.
 - Use exact label names from the provided lists.
 - Evidence should be a concise independent clause in third person past tense (e.g. 'built' not 'builds'), paraphrased from the role text. The original meaning must be preserved. Resolve vague references (e.g. 'this workflow', 'our team') using specific terms from the role text. Do not fabricate outcomes not stated in the role text. Hard limit: 120 characters per snippet — when cutting for length, remove section headers, first-person subjects, possessives, quantifiers with no semantic value (e.g. 'both'), redundant adjectives, and trailing context that restates something already implied. Preserve specific metrics, named programs or frameworks, action verbs that convey the nature of the work, and any noun or phrase that establishes why the activity belongs to this label (e.g. 'advisory group', 'to senior leadership').
 - Paraphrasing examples: 'trained BPOs on this workflow to expand capacity' → 'Trained BPOs on complaints screening workflow to expand team capacity' (68 chars) | 'I led the national small claims strategy, achieving a defense success rate of over 90% across cases filed against us' → 'Led national small claims strategy and achieved a defense success rate of over 90%' (82 chars) | 'System Architecture & Development: Spearheaded end-to-end development and launch of a data analytics SaaS platform for Instagram influencers, enabling engagement trend prediction and content ROI analysis' → 'Spearheaded development and launch of an analytics platform for Instagram enabling trend prediction and content ROI' (115 chars)
-- For industry evidence: describe the employer's business sector only. Do not reference specific roles, programs, or projects. Use this exact format: 'From work at [Company], a [descriptor noun]' (single employer) or 'From [Company], a [descriptor] and [Company], a [descriptor]' (multiple). Example: 'From work at Coinbase, a cryptocurrency exchange'. Maximum 80 characters.
+- For industry evidence: describe the employer's business sector only. Do not reference specific roles, programs, or projects. Write '[Company], a [descriptor, noun]' — no prefix. Maximum 80 characters per snippet.
 - Use single quotes inside evidence strings.
 
 Function levels list:
@@ -350,6 +350,10 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
       if (formatted.length === 2) return formatted[0] + ', ' + formatted[1]
       return formatted.slice(0, -1).join(', ') + ', and ' + formatted[formatted.length - 1]
     }
+    if (joinStyle === 'industry') {
+      if (formatted.length === 1) return 'From work at ' + formatted[0]
+      return 'From ' + formatted.join(' and ')
+    }
     return formatted.join(', and ')
   }
 
@@ -472,7 +476,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   const kaAssignments     = Array.isArray(kaResult?.role_assignments) ? kaResult.role_assignments : []
 
   const functions       = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'functions',       functionNames, MAX_EVIDENCE_CHARS, MAX_FUNCTION_EVIDENCE_SNIPPETS,     'recency', 'list'))
-  const industriesOut   = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'industries',      industryNames, MAX_INDUSTRY_EVIDENCE_CHARS, MAX_INDUSTRY_EVIDENCE_LINES))
+  const industriesOut   = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, sharedAssignments, 'industries',      industryNames, MAX_INDUSTRY_EVIDENCE_CHARS, MAX_INDUSTRY_EVIDENCE_LINES, 'tenure', 'industry'))
   const knowledgeAreasOut = convertMonthsToYears(aggregateRoleAssignments(rolePayload.roles, kaAssignments,   'knowledge_areas', knowledgeAreaNames, MAX_EVIDENCE_CHARS, MAX_EVIDENCE_SNIPPETS_PER_LABEL, 'relevancy'))
 
   return {
