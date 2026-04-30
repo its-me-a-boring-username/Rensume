@@ -1,19 +1,24 @@
 // src/components/SaveOptions.jsx
-// The two save mode radio options + download button.
-// "Download and save" is greyed out until account creation is implemented.
+// Three save mode options + download button.
 
 export const SAVE_MODES = {
-  save: {
-    label: 'Download and save to my account',
+  save_account: {
+    label: 'Save to my account',
     recommended: false,
     comingSoon: true,
     description: 'Account creation coming soon.',
   },
-  download: {
-    label: 'Download only',
+  download_save: {
+    label: 'Download and save',
     recommended: true,
     comingSoon: false,
-    description: "Get your PDF and a unique link to your card. There's no way to access your card if you lose the link, so save it somewhere safe.",
+    description: 'Download your PDF and get a permanent shareable link for your digital card. No account needed.',
+  },
+  download: {
+    label: 'Download only',
+    recommended: false,
+    comingSoon: false,
+    description: 'Just the PDF. Your card is not saved and the QR code links to rensume.com.',
   },
 }
 
@@ -88,7 +93,7 @@ function RadioOption({ id, mode, selected, onSelect }) {
   )
 }
 
-export default function SaveOptions({ selected, onSelect, onDownload, loading = false }) {
+export default function SaveOptions({ selected, onSelect, onDownload, loading = false, cardUrl = null }) {
   return (
     <div>
       {Object.entries(SAVE_MODES).map(([id, mode]) => (
@@ -97,23 +102,41 @@ export default function SaveOptions({ selected, onSelect, onDownload, loading = 
 
       <button
         onClick={onDownload}
-        disabled={loading}
+        disabled={loading || SAVE_MODES[selected]?.comingSoon}
         style={{
           display: 'block',
           width: '100%',
-          background: loading ? '#c8a0b0' : '#904060',
+          background: loading || SAVE_MODES[selected]?.comingSoon ? '#c8a0b0' : '#904060',
           color: '#fff',
           fontSize: 11,
           fontWeight: 700,
           padding: 11,
           borderRadius: 3,
           border: 'none',
-          cursor: loading ? 'not-allowed' : 'pointer',
+          cursor: loading || SAVE_MODES[selected]?.comingSoon ? 'not-allowed' : 'pointer',
           marginBottom: 8,
         }}
       >
-        {loading ? 'Preparing your card...' : 'Download my card'}
+        {loading
+          ? 'Preparing your card...'
+          : selected === 'download_save' ? 'Download and save →'
+          : 'Download my card →'}
       </button>
+
+      {cardUrl && (
+        <div style={{ background: '#f5f1eb', border: '0.5px solid #d8d0c4', borderRadius: 4, padding: '10px 12px', marginBottom: 8 }}>
+          <div style={{ fontSize: 8.5, fontWeight: 700, color: '#904060', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4 }}>Your card link</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 10, color: '#1a1410', wordBreak: 'break-all', flex: 1 }}>{cardUrl}</span>
+            <button
+              onClick={() => navigator.clipboard.writeText(cardUrl)}
+              style={{ fontSize: 9, fontWeight: 700, color: '#904060', background: 'none', border: '1px solid #904060', borderRadius: 3, padding: '3px 8px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ fontSize: 9.5, color: '#b0a890', textAlign: 'center', lineHeight: 1.6 }}>
         Your resume is deleted after your card is built. Your data, your choice.

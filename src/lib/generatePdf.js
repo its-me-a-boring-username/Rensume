@@ -236,7 +236,7 @@ function makeColumn(doc, colX, startPage, reusePages) {
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 
-export async function downloadCardPdf(profile, themeName = 'bordeaux') {
+export async function downloadCardPdf(profile, themeName = 'bordeaux', cardUrl = 'https://rensume.com') {
   try {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' })
     C = THEME_COLORS[themeName] || THEME_COLORS.bordeaux
@@ -244,7 +244,7 @@ export async function downloadCardPdf(profile, themeName = 'bordeaux') {
     registerIBMPlexSans(doc)
 
     // Generate QR code as base64 PNG
-    const qrDataUrl = await QRCode.toDataURL('https://rensume.com', {
+    const qrDataUrl = await QRCode.toDataURL(cardUrl, {
       margin: 1,
       width: 200,
       color: { dark: '#000000', light: '#ffffff' }

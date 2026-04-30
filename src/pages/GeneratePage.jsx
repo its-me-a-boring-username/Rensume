@@ -271,13 +271,13 @@ function InputContent({ resumeText, setResumeText, inputMode, setInputMode, pdfF
   )
 }
 
-function ResultContent({ profile, theme, setTheme, saveMode, setSaveMode, handleDownload, downloading }) {
+function ResultContent({ profile, theme, setTheme, saveMode, setSaveMode, handleDownload, downloading, cardUrl }) {
   return (
     <div className="card-reveal">
       <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: '#a09080', marginBottom: 10 }}>Choose your theme</div>
       <div style={{ marginBottom: 16 }}><ThemePicker theme={theme} onChange={setTheme} /></div>
       <div style={{ marginBottom: 16 }}><Card profile={profile} theme={theme} showEvidence /></div>
-      <SaveOptions selected={saveMode} onSelect={setSaveMode} onDownload={handleDownload} loading={downloading} />
+      <SaveOptions selected={saveMode} onSelect={setSaveMode} onDownload={handleDownload} loading={downloading} cardUrl={cardUrl} />
     </div>
   )
 }
@@ -289,11 +289,12 @@ export default function GeneratePage() {
   const [pdfFilename, setPdfFilename] = useState('')
   const [profile, setProfile]         = useState(null)
   const [theme, setTheme]             = useState('bordeaux')
-  const [saveMode, setSaveMode]       = useState('download')
+  const [saveMode, setSaveMode]       = useState('download_save')
   const [loadingMsg, setLoadingMsg]   = useState('')
   const [error, setError]             = useState('')
   const [downloading, setDownloading] = useState(false)
   const [deletedNames, setDeletedNames] = useState([])
+  const [cardUrl, setCardUrl] = useState(null)
 
   const loading = state === 'loading'
 
@@ -320,17 +321,31 @@ export default function GeneratePage() {
     } finally { setLoadingMsg('') }
   }
 
-  const handleRegenerate = () => { setState('input'); setProfile(null); setDeletedNames([]); setError('') }
+  const handleRegenerate = () => { setState('input'); setProfile(null); setDeletedNames([]); setError(''); setCardUrl(null) }
   const handleDownload = async () => {
     if (!filteredProfile) return
     setDownloading(true)
-    try { await downloadCardPdf(filteredProfile, theme) }
-    catch (e) { alert(`PDF error: ${e.message}`); console.error('PDF generation failed:', e) }
+    try {
+      let url = 'https://rensume.com'
+      if (saveMode === 'download_save') {
+        const res = await fetch('/api/save-card', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile: filteredProfile, theme }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Failed to save card')
+        url = data.url
+        setCardUrl(url)
+      }
+      await downloadCardPdf(filteredProfile, theme, url)
+    }
+    catch (e) { alert(`Error: ${e.message}`); console.error(e) }
     finally { setDownloading(false) }
   }
 
   const inputProps = { resumeText, setResumeText, inputMode, setInputMode, pdfFilename, setPdfFilename, error, setError, loading, handleGenerate }
-  const resultProps = { profile: filteredProfile, theme, setTheme, saveMode, setSaveMode, handleDownload, downloading }
+  const resultProps = { profile: filteredProfile, theme, setTheme, saveMode, setSaveMode, handleDownload, downloading, cardUrl }
 
   return (
     <div style={{ fontFamily: '-apple-system, Arial, sans-serif', background: '#faf8f4', minHeight: '100vh' }}>

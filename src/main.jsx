@@ -5,6 +5,7 @@ import { supabase } from './lib/supabase.js'
 import LandingPage from './pages/LandingPage'
 import RecruiterLandingPage from './pages/RecruiterLandingPage'
 import GeneratePage from './pages/GeneratePage'
+import CardPage from './pages/CardPage'
 import ResearchLogin from './components/ResearchLogin.jsx'
 import ResearchNav from './components/ResearchNav.jsx'
 import ResearchRunAnalysis from './pages/admin/ResearchRunAnalysis.jsx'
@@ -103,6 +104,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/" element={<RecruiterLandingPage />} />
         <Route path="/candidate" element={<LandingPage />} />
         <Route path="/generate" element={<GeneratePage />} />
+        <Route path="/card/:token" element={<CardPage />} />
 
         {/* Admin — auth required */}
         <Route path="/admin/*" element={<AdminApp />} />
