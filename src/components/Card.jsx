@@ -148,22 +148,56 @@ export const THEMES = {
 
 export const THEME_KEYS = Object.keys(THEMES)
 
+// ─── Size scales ─────────────────────────────────────────────────────────────
+
+const PDF_S = {
+  logoText: 7,      logoMb: 8,
+  summary: 13,
+  sectionLabel: 6.5, sectionMb: 5,  sectionPb: 3,
+  strengthsText: 9,  strengthsPad: '8px 18px 10px',
+  headerPad: '14px 18px',
+  bodyPad: '12px 18px', colGap: '0 16px',
+  barLabel: 10, barYears: 10,
+  barW: 3, barH: 13, barGap: 6,
+  rowPad: '4px 0', rowMb: 2,
+  evidenceText: 9, evidencePad: '2px 0 6px 9px',
+  toolChip: 8, toolPad: '2px 6px', toolGap: 3,
+  credType: 6.5, credName: 9.5, credSub: 8.5, credMb: 7,
+  footerText: 7, footerPad: '7px 18px',
+}
+
+const WEB_S = {
+  logoText: 10,     logoMb: 12,
+  summary: 20,
+  sectionLabel: 9,  sectionMb: 10, sectionPb: 5,
+  strengthsText: 13, strengthsPad: '16px 32px 20px',
+  headerPad: '28px 32px',
+  bodyPad: '24px 32px', colGap: '0 40px',
+  barLabel: 15, barYears: 14,
+  barW: 4, barH: 18, barGap: 10,
+  rowPad: '7px 0', rowMb: 4,
+  evidenceText: 12, evidencePad: '4px 0 14px 14px',
+  toolChip: 11, toolPad: '4px 10px', toolGap: 6,
+  credType: 9, credName: 13, credSub: 11.5, credMb: 12,
+  footerText: 9, footerPad: '12px 32px',
+}
+
 // ─── Bar row (label left, years right, evidence below) ────────────────────────
 
-function BarRow({ label, years, barColor, labelColor, yearsColor, evidence, showEvidence }) {
+function BarRow({ label, years, barColor, labelColor, yearsColor, evidence, showEvidence, s }) {
   return (
-    <div style={{ marginBottom: 2 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 3, height: 13, borderRadius: 1, background: barColor, flexShrink: 0, display: 'inline-block' }} />
-          <span style={{ fontFamily: F.label, fontWeight: 700, fontSize: 10, color: labelColor }}>
+    <div style={{ marginBottom: s.rowMb }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: s.rowPad }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: s.barGap }}>
+          <span style={{ width: s.barW, height: s.barH, borderRadius: 1, background: barColor, flexShrink: 0, display: 'inline-block' }} />
+          <span style={{ fontFamily: F.label, fontWeight: 700, fontSize: s.barLabel, color: labelColor }}>
             {label}
           </span>
         </span>
-        <span style={{ fontFamily: F.label, fontWeight: 700, fontSize: 10, color: yearsColor }}>{years}y</span>
+        <span style={{ fontFamily: F.label, fontWeight: 700, fontSize: s.barYears, color: yearsColor }}>{years}y</span>
       </div>
       {showEvidence && evidence && (
-        <div style={{ fontFamily: F.body, fontSize: 9, lineHeight: 1.65, padding: '2px 0 6px 9px', color: '#706050' }}>
+        <div style={{ fontFamily: F.body, fontSize: s.evidenceText, lineHeight: 1.65, padding: s.evidencePad, color: '#706050' }}>
           {evidence}
         </div>
       )}
@@ -173,22 +207,29 @@ function BarRow({ label, years, barColor, labelColor, yearsColor, evidence, show
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
-export default function Card({ profile, theme = 'bordeaux', showEvidence = false, style = {} }) {
+export default function Card({ profile, theme = 'bordeaux', showEvidence = false, web = false, style = {} }) {
   const t = THEMES[theme] || THEMES.bordeaux
+  const s = web ? WEB_S : PDF_S
   if (!profile) return null
 
   const { summary, functions = [], knowledge_areas = [], industries = [], strengths, tools = [], credentials = [] } = profile
+
+  const sectionLabel = (text) => (
+    <div style={{ ...t.section, fontFamily: F.body, fontSize: s.sectionLabel, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: s.sectionMb, paddingBottom: s.sectionPb }}>
+      {text}
+    </div>
+  )
 
   return (
     <div style={{ borderRadius: 8, overflow: 'hidden', fontFamily: F.body, ...t.card, ...style }}>
       <InjectFonts />
 
       {/* Header */}
-      <div style={{ ...t.header, padding: '14px 18px' }}>
-        <div style={{ ...t.logo, fontFamily: F.body, fontSize: 7, fontWeight: 700, letterSpacing: '.16em', marginBottom: 8, textTransform: 'uppercase' }}>
+      <div style={{ ...t.header, padding: s.headerPad }}>
+        <div style={{ ...t.logo, fontFamily: F.body, fontSize: s.logoText, fontWeight: 700, letterSpacing: '.16em', marginBottom: s.logoMb, textTransform: 'uppercase' }}>
           Rensume · Taxonomy Profile
         </div>
-        <div style={{ ...t.summary, fontFamily: F.headline, fontWeight: 700, fontSize: 13, lineHeight: 1.35 }}>
+        <div style={{ ...t.summary, fontFamily: F.headline, fontWeight: 700, fontSize: s.summary, lineHeight: 1.35 }}>
           {summary}
         </div>
       </div>
@@ -196,42 +237,33 @@ export default function Card({ profile, theme = 'bordeaux', showEvidence = false
       {/* Accent rule */}
       <div style={{ ...t.accent, height: 2 }} />
 
-      {/* Strengths — full width band with label */}
+      {/* Strengths */}
       {strengths && (
-        <div style={{ ...t.strengthsBg, padding: '8px 18px 10px' }}>
-          <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
-            Strengths
-          </div>
-          <div style={{ ...t.strengthsText, fontFamily: F.body, fontSize: 9, lineHeight: 1.65 }}>
+        <div style={{ ...t.strengthsBg, padding: s.strengthsPad }}>
+          {sectionLabel('Strengths')}
+          <div style={{ ...t.strengthsText, fontFamily: F.body, fontSize: s.strengthsText, lineHeight: 1.65 }}>
             {strengths}
           </div>
         </div>
       )}
 
       {/* Body — two columns */}
-      <div style={{ ...t.body, padding: '12px 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+      <div style={{ ...t.body, padding: s.bodyPad, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: s.colGap }}>
 
         {/* LEFT: Function Levels */}
         {functions.length > 0 && (
           <div>
-            <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
-              Function Levels
-            </div>
+            {sectionLabel('Function Levels')}
             {[...functions].sort((a, b) => {
               const ORDER = ['Strategic Executive', 'Strategic Advisor', 'Strategic Manager', 'People Manager', 'Process Manager', 'Process Specialist']
               const ai = ORDER.findIndex(l => a.name.includes(l))
               const bi = ORDER.findIndex(l => b.name.includes(l))
               return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
             }).map((fn, i) => (
-              <BarRow
-                key={i}
-                label={getSeniorityLabel(fn.name, fn.years)}
-                years={fn.years}
-                barColor={t.barFn.background}
-                labelColor={t.labelFn.color}
-                yearsColor={t.labelFn.color}
-                evidence={fn.evidence}
-                showEvidence={showEvidence}
+              <BarRow key={i} s={s}
+                label={getSeniorityLabel(fn.name, fn.years)} years={fn.years}
+                barColor={t.barFn.background} labelColor={t.labelFn.color} yearsColor={t.labelFn.color}
+                evidence={fn.evidence} showEvidence={showEvidence}
               />
             ))}
           </div>
@@ -240,19 +272,12 @@ export default function Card({ profile, theme = 'bordeaux', showEvidence = false
         {/* RIGHT: Industries */}
         {industries.length > 0 && (
           <div>
-            <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
-              Industries
-            </div>
+            {sectionLabel('Industries')}
             {industries.map((ind, i) => (
-              <BarRow
-                key={i}
-                label={ind.name}
-                years={ind.years}
-                barColor={t.barInd.background}
-                labelColor={t.labelInd.color}
-                yearsColor={t.labelInd.color}
-                evidence={ind.evidence}
-                showEvidence={showEvidence}
+              <BarRow key={i} s={s}
+                label={ind.name} years={ind.years}
+                barColor={t.barInd.background} labelColor={t.labelInd.color} yearsColor={t.labelInd.color}
+                evidence={ind.evidence} showEvidence={showEvidence}
               />
             ))}
           </div>
@@ -260,36 +285,26 @@ export default function Card({ profile, theme = 'bordeaux', showEvidence = false
 
         {/* LEFT continued: Knowledge Areas */}
         {knowledge_areas.length > 0 && (
-          <div style={{ marginTop: 10 }}>
-            <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
-              Knowledge Areas
-            </div>
+          <div style={{ marginTop: s.sectionMb }}>
+            {sectionLabel('Knowledge Areas')}
             {knowledge_areas.map((ka, i) => (
-              <BarRow
-                key={i}
-                label={ka.name}
-                years={ka.years}
-                barColor={t.barKa.background}
-                labelColor={t.labelKa.color}
-                yearsColor={t.labelKa.color}
-                evidence={ka.evidence}
-                showEvidence={showEvidence}
+              <BarRow key={i} s={s}
+                label={ka.name} years={ka.years}
+                barColor={t.barKa.background} labelColor={t.labelKa.color} yearsColor={t.labelKa.color}
+                evidence={ka.evidence} showEvidence={showEvidence}
               />
             ))}
           </div>
         )}
 
         {/* RIGHT continued: Tools + Credentials */}
-        <div style={{ marginTop: 10 }}>
-
+        <div style={{ marginTop: s.sectionMb }}>
           {tools.length > 0 && (
             <div>
-              <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
-                Tooling &amp; Methods
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 10 }}>
+              {sectionLabel('Tooling & Methods')}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: s.toolGap, marginBottom: s.sectionMb }}>
                 {tools.map((tool, i) => (
-                  <span key={i} style={{ fontFamily: F.body, fontSize: 8, fontWeight: 700, padding: '2px 6px', borderRadius: 2, background: '#edeae6', color: '#403830', border: '1px solid #c8c0b8' }}>
+                  <span key={i} style={{ fontFamily: F.body, fontSize: s.toolChip, fontWeight: 700, padding: s.toolPad, borderRadius: 2, background: '#edeae6', color: '#403830', border: '1px solid #c8c0b8' }}>
                     {tool}
                   </span>
                 ))}
@@ -299,19 +314,17 @@ export default function Card({ profile, theme = 'bordeaux', showEvidence = false
 
           {credentials.length > 0 && (
             <div>
-              <div style={{ ...t.section, fontFamily: F.body, fontSize: 6.5, fontWeight: 700, letterSpacing: '.13em', textTransform: 'uppercase', marginBottom: 5, paddingBottom: 3 }}>
-                Education &amp; Credentials
-              </div>
+              {sectionLabel('Education & Credentials')}
               {credentials.map((c, i) => (
-                <div key={i} style={{ marginBottom: 7 }}>
-                  <div style={{ fontFamily: F.body, fontSize: 6.5, fontWeight: 700, color: t.years.color, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>
+                <div key={i} style={{ marginBottom: s.credMb }}>
+                  <div style={{ fontFamily: F.body, fontSize: s.credType, fontWeight: 700, color: t.years.color, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>
                     {c.type}
                   </div>
-                  <div style={{ fontFamily: F.label, fontWeight: 700, fontSize: 9.5, color: '#1a1410' }}>
+                  <div style={{ fontFamily: F.label, fontWeight: 700, fontSize: s.credName, color: '#1a1410' }}>
                     {c.name}
                   </div>
                   {(c.institution || c.year) && (
-                    <div style={{ fontFamily: F.body, fontSize: 8.5, color: t.evidenceText.color }}>
+                    <div style={{ fontFamily: F.body, fontSize: s.credSub, color: t.evidenceText.color }}>
                       {[c.institution, c.year].filter(Boolean).join(' · ')}
                     </div>
                   )}
@@ -324,9 +337,9 @@ export default function Card({ profile, theme = 'bordeaux', showEvidence = false
       </div>
 
       {/* Footer */}
-      <div style={{ ...t.footer, padding: '7px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ ...t.footerLeft, fontFamily: F.body, fontSize: 7 }}>Candidate-owned · read-only for recruiters</span>
-        <span style={{ ...t.footerRight, fontFamily: F.body, fontSize: 7, fontWeight: 700, letterSpacing: '.1em' }}>RENSUME</span>
+      <div style={{ ...t.footer, padding: s.footerPad, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ ...t.footerLeft, fontFamily: F.body, fontSize: s.footerText }}>Candidate-owned · read-only for recruiters</span>
+        <span style={{ ...t.footerRight, fontFamily: F.body, fontSize: s.footerText, fontWeight: 700, letterSpacing: '.1em' }}>RENSUME</span>
       </div>
 
     </div>

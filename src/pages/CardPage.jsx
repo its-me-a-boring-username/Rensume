@@ -57,11 +57,11 @@ export default function CardPage() {
       </nav>
 
       {/* Body */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 24px', gap: 20 }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 24px', gap: 20, maxWidth: 860, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
 
         {/* Recruiter CTA */}
         <div style={{
-          width: '100%', maxWidth: 720,
+          width: '100%', maxWidth: 800,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           background: '#fff', border: '0.5px solid #d8d0c4', borderRadius: 4,
           padding: '14px 20px', gap: 24,
@@ -91,17 +91,18 @@ export default function CardPage() {
         {card && (
           <Card
             profile={{
-              summary:        card.summary,
-              strengths:      card.strengths,
-              functions:      card.functions,
+              summary:         card.summary,
+              strengths:       card.strengths,
+              functions:       card.functions,
               knowledge_areas: card.knowledge_areas,
-              industries:     card.industries,
-              tools:          card.tools || [],
-              credentials:    card.credentials || [],
+              industries:      card.industries,
+              tools:           card.tools || [],
+              credentials:     card.credentials || [],
             }}
             theme={card.theme}
             showEvidence={true}
-            style={{ width: 720 }}
+            web={true}
+            style={{ width: '100%' }}
           />
         )}
       </main>
