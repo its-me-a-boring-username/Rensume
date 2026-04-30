@@ -1,6 +1,8 @@
 // src/components/SaveOptions.jsx
 // Three save mode options + download button.
 
+import { useState } from 'react'
+
 export const SAVE_MODES = {
   save_account: {
     label: 'Save to my account',
@@ -93,6 +95,33 @@ function RadioOption({ id, mode, selected, onSelect }) {
   )
 }
 
+function CopyLinkBox({ url }) {
+  const [copied, setCopied] = useState(false)
+
+  function handleCopy() {
+    navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const accent = copied ? '#904060' : '#c0a0b0'
+
+  return (
+    <div style={{ background: '#f5f1eb', border: '0.5px solid #d8d0c4', borderRadius: 4, padding: '10px 12px', marginBottom: 8 }}>
+      <div style={{ fontSize: 8.5, fontWeight: 700, color: '#904060', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4 }}>Your card link</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 10, color: '#1a1410', wordBreak: 'break-all', flex: 1 }}>{url}</span>
+        <button
+          onClick={handleCopy}
+          style={{ fontSize: 9, fontWeight: 700, color: accent, background: 'none', border: `1px solid ${accent}`, borderRadius: 3, padding: '3px 8px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'color 0.15s, border-color 0.15s' }}
+        >
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function SaveOptions({ selected, onSelect, onDownload, loading = false, cardUrl = null }) {
   return (
     <div>
@@ -123,20 +152,7 @@ export default function SaveOptions({ selected, onSelect, onDownload, loading = 
           : 'Download my card →'}
       </button>
 
-      {cardUrl && (
-        <div style={{ background: '#f5f1eb', border: '0.5px solid #d8d0c4', borderRadius: 4, padding: '10px 12px', marginBottom: 8 }}>
-          <div style={{ fontSize: 8.5, fontWeight: 700, color: '#904060', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4 }}>Your card link</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 10, color: '#1a1410', wordBreak: 'break-all', flex: 1 }}>{cardUrl}</span>
-            <button
-              onClick={() => navigator.clipboard.writeText(cardUrl)}
-              style={{ fontSize: 9, fontWeight: 700, color: '#904060', background: 'none', border: '1px solid #904060', borderRadius: 3, padding: '3px 8px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-            >
-              Copy
-            </button>
-          </div>
-        </div>
-      )}
+      {cardUrl && <CopyLinkBox url={cardUrl} />}
 
       <div style={{ fontSize: 9.5, color: '#b0a890', textAlign: 'center', lineHeight: 1.6 }}>
         Your resume is deleted after your card is built. Your data, your choice.
