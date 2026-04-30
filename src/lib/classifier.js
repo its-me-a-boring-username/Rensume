@@ -321,6 +321,15 @@ function aggregateRoleAssignments(roles, roleAssignments, fieldKey, allowedNames
       candidates.sort((a, b) => (roles[b.role_index]?.months || 0) - (roles[a.role_index]?.months || 0))
     }
 
+    if (joinStyle === 'industry') {
+      const seenEmployers = new Map()
+      for (const c of candidates) {
+        const emp = (roles[c.role_index]?.employer || '').toLowerCase()
+        if (!seenEmployers.has(emp)) seenEmployers.set(emp, c)
+      }
+      candidates.splice(0, candidates.length, ...Array.from(seenEmployers.values()))
+    }
+
     const selected = []
     const usedRoles = new Set()
     for (const row of candidates) {
