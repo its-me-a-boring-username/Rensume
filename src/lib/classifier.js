@@ -430,7 +430,21 @@ async function callAPI(system, userContent, model) {
 
 // --- Main classifier -------------------------------------------------------
 
+const DEDUP_THRESHOLD_CHARS = 15000
 const MAX_RESUME_INPUT_CHARS = 20000
+
+function deduplicateParagraphs(text) {
+  const seen = new Set()
+  return text
+    .split(/\n{2,}/)
+    .filter(para => {
+      const key = para.replace(/\s+/g, ' ').trim()
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .join('\n\n')
+}
 
 export async function classifyResume(resumeText, onProgress = () => {}) {
   if (!resumeText?.trim()) {
@@ -438,8 +452,11 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   }
 
   let resumeInput = resumeText
-  if (resumeText.length > MAX_RESUME_INPUT_CHARS) {
-    const cut = resumeText.slice(0, MAX_RESUME_INPUT_CHARS)
+  if (resumeText.length > DEDUP_THRESHOLD_CHARS) {
+    resumeInput = deduplicateParagraphs(resumeText)
+  }
+  if (resumeInput.length > MAX_RESUME_INPUT_CHARS) {
+    const cut = resumeInput.slice(0, MAX_RESUME_INPUT_CHARS)
     const lastNewline = cut.lastIndexOf('\n')
     resumeInput = lastNewline > MAX_RESUME_INPUT_CHARS * 0.8 ? cut.slice(0, lastNewline) : cut
     onProgress('Resume is very long — analyzing the most recent experience...')
