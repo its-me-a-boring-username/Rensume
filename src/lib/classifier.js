@@ -216,6 +216,15 @@ function normalizeExtractedRoles(parsed) {
   }))
 }
 
+const MAX_ROLE_TEXT_CHARS = 1200
+
+function truncateAtWord(text, max) {
+  if (text.length <= max) return text
+  const cut = text.slice(0, max)
+  const lastSpace = cut.lastIndexOf(' ')
+  return lastSpace > max * 0.7 ? cut.slice(0, lastSpace) : cut
+}
+
 function buildRolePayload(roles) {
   const clean = (Array.isArray(roles) ? roles : []).filter(r => !r.flagged && (Number(r.months) || 0) > 0)
   return {
@@ -224,7 +233,7 @@ function buildRolePayload(roles) {
       title:      r.title    || '',
       employer:   r.employer || '',
       months:     Number(r.months) || 0,
-      text:       r.text     || '',
+      text:       truncateAtWord(r.text || '', MAX_ROLE_TEXT_CHARS),
     })),
   }
 }
@@ -421,9 +430,19 @@ async function callAPI(system, userContent, model) {
 
 // --- Main classifier -------------------------------------------------------
 
+const MAX_RESUME_INPUT_CHARS = 20000
+
 export async function classifyResume(resumeText, onProgress = () => {}) {
   if (!resumeText?.trim()) {
     throw new Error('No resume text provided.')
+  }
+
+  let resumeInput = resumeText
+  if (resumeText.length > MAX_RESUME_INPUT_CHARS) {
+    const cut = resumeText.slice(0, MAX_RESUME_INPUT_CHARS)
+    const lastNewline = cut.lastIndexOf('\n')
+    resumeInput = lastNewline > MAX_RESUME_INPUT_CHARS * 0.8 ? cut.slice(0, lastNewline) : cut
+    onProgress('Resume is very long — analyzing the most recent experience...')
   }
 
   onProgress('Loading taxonomy...')
@@ -439,7 +458,7 @@ export async function classifyResume(resumeText, onProgress = () => {}) {
   try {
     extracted = await callAPI(
       buildExtractSystem(),
-      'Parse this resume text:\n\n' + resumeText,
+      'Parse this resume text:\n\n' + resumeInput,
       'claude-haiku-4-5-20251001'
     )
   } catch (e) {
